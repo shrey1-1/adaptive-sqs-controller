@@ -1,0 +1,19 @@
+{
+  "n_messages": 200,
+  "workers": 10,
+  "arrival_rate": 1.2,
+  "seeds": [11, 22, 33, 44, 55],
+  "safety_margin": 2.0,
+  "history_window": 40,
+  "scenarios": {
+    "mostly_short_no_failure": {"workload": "mostly_short", "failure": "none"},
+    "mixed_no_failure": {"workload": "mixed", "failure": "none"},
+    "heavy_tailed_no_failure": {"workload": "heavy_tailed", "failure": "none"},
+    "mixed_with_failures": {"workload": "mixed", "failure": "medium"},
+    "heavy_tailed_with_failures": {"workload": "heavy_tailed", "failure": "medium"},
+    "sudden_shift": {"workload": "sudden_shift", "failure": "low"},
+    "margin_sweep": {"workload": "mixed", "failure": "medium", "safety_margins": [0.0, 1.0, 2.0, 4.0]},
+    "window_sweep": {"workload": "sudden_shift", "failure": "low", "history_windows": [10, 25, 50, 100]}
+  }
+}
+

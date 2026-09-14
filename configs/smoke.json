@@ -1,0 +1,14 @@
+{
+  "n_messages": 50,
+  "workers": 6,
+  "arrival_rate": 1.0,
+  "seeds": [11, 22],
+  "safety_margin": 2.0,
+  "history_window": 30,
+  "scenarios": {
+    "mixed_no_failure": {"workload": "mixed", "failure": "none"},
+    "mixed_with_failures": {"workload": "mixed", "failure": "medium"},
+    "sudden_shift": {"workload": "sudden_shift", "failure": "low"}
+  }
+}
+
