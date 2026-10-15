@@ -151,17 +151,96 @@ def generate_plots(attempts: pd.DataFrame, runs: pd.DataFrame, output_dir: str |
     plt.title("Duplicate processing versus failure recovery"); plt.xlabel("Mean recovery time (simulated seconds)"); plt.ylabel("Duplicate-processing rate (fraction)"); plt.tight_layout(); plt.savefig(output_dir / "10_tradeoff.png", dpi=160); plt.close()
 
 
+def write_html_report(
+    attempts: pd.DataFrame,
+    runs: pd.DataFrame,
+    aggregates: pd.DataFrame,
+    output_dir: str | Path,
+) -> Path:
+    """Write a human-readable report while retaining machine-readable CSVs."""
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    plot_dir = output_dir / "plots"
+    selected = [
+        "scenario", "policy_name", "repetitions",
+        "duplicate_processing_rate_mean", "mean_end_to_end_latency_s_mean",
+        "p95_end_to_end_latency_s_mean", "throughput_jobs_per_s_mean",
+        "mean_failure_recovery_time_s_mean", "queue_api_operations_per_completed_message_mean",
+    ]
+    selected = [column for column in selected if column in aggregates.columns]
+    summary = aggregates[selected].copy()
+    rename = {
+        "policy_name": "Policy",
+        "scenario": "Scenario",
+        "repetitions": "Seeds",
+        "duplicate_processing_rate_mean": "Duplicate processing rate",
+        "mean_end_to_end_latency_s_mean": "Mean latency (s)",
+        "p95_end_to_end_latency_s_mean": "P95 latency (s)",
+        "throughput_jobs_per_s_mean": "Throughput (jobs/s)",
+        "mean_failure_recovery_time_s_mean": "Mean recovery (s)",
+        "queue_api_operations_per_completed_message_mean": "API operations / job",
+    }
+    summary = summary.rename(columns=rename)
+    numeric = summary.select_dtypes(include="number").columns
+    summary[numeric] = summary[numeric].round(3)
+    plot_links = "\n".join(
+        f'<div class="figure"><h3>{index:02d} {path.stem[3:].replace("_", " ").title()}</h3><a href="plots/{path.name}"><img src="plots/{path.name}" alt="{path.stem.replace("_", " ")}"></a></div>'
+        for index, path in enumerate(sorted(plot_dir.glob("*.png")), start=1)
+    )
+    report = f"""<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Adaptive SQS Controller Report</title>
+<style>
+body {{ font-family: Segoe UI, Arial, sans-serif; margin: 32px; color: #1f2937; background: #f8fafc; }}
+.card {{ background: white; border-radius: 12px; padding: 22px; margin: 18px 0; box-shadow: 0 2px 10px #0001; overflow-x: auto; }}
+h1 {{ color: #12355b; }} h2 {{ color: #205493; }}
+table {{ border-collapse: collapse; width: 100%; font-size: 13px; }}
+th {{ background: #205493; color: white; text-align: left; padding: 9px; position: sticky; top: 0; }}
+td {{ padding: 8px; border-bottom: 1px solid #dbe3ec; }} tr:nth-child(even) {{ background: #f1f5f9; }}
+a {{ color: #1769aa; }} .note {{ color: #475569; }}
+.figure {{ margin: 26px 0 34px; }}
+.figure h3 {{ color: #205493; margin-bottom: 10px; }}
+.figure img {{ display: block; max-width: 100%; width: 900px; height: auto; border: 1px solid #dbe3ec; }}
+</style></head><body>
+<h1>Adaptive SQS Visibility Timeout Controller</h1>
+<p class="note">Readable summary generated from executed simulation results. Detailed attempt-level data remains in the CSV files beside this report.</p>
+<div class="card"><h2>Experiment overview</h2>
+<p><b>Runs:</b> {len(runs):,} &nbsp; <b>Attempt records:</b> {len(attempts):,} &nbsp; <b>Scenarios:</b> {runs['scenario'].nunique()} &nbsp; <b>Policies:</b> {runs['policy_name'].nunique()}</p>
+</div>
+<div class="card"><h2>Policy comparison</h2>{summary.to_html(index=False, na_rep="—", classes="summary")}</div>
+<div class="card"><h2>Figures</h2>{plot_links or '<p>Run with --plots to generate figures.</p>'}</div>
+<div class="card"><h2>Files</h2><ul><li><a href="run_metrics.csv">Run metrics CSV</a></li><li><a href="aggregate_metrics.csv">Aggregate metrics CSV</a></li><li><a href="attempt_metrics.csv">Attempt metrics CSV</a></li></ul></div>
+</body></html>"""
+    report_path = output_dir / "report.html"
+    report_path.write_text(report, encoding="utf-8")
+    return report_path
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", required=True)
     parser.add_argument("--output", default="results")
     parser.add_argument("--plots", action="store_true")
+    parser.add_argument("--verbose", action="store_true", help="Print the full aggregate table in the terminal")
     args = parser.parse_args()
     config = json.loads(Path(args.config).read_text(encoding="utf-8"))
     attempts, runs, aggregates = run_experiments(config, args.output)
     if args.plots:
-        generate_plots(attempts, runs, Path(args.output) / "plots")
-    print(aggregates.to_string(index=False))
+        try:
+            generate_plots(attempts, runs, Path(args.output) / "plots")
+        except ModuleNotFoundError as exc:
+            if exc.name not in {"matplotlib", "seaborn"}:
+                raise
+            print("Plotting packages are unavailable; CSVs and the HTML report will still be generated.")
+    report_path = write_html_report(attempts, runs, aggregates, args.output)
+    if args.verbose:
+        print(aggregates.to_string(index=False))
+    else:
+        headline = runs.groupby("policy_name", as_index=False)[
+            ["duplicate_processing_rate", "mean_end_to_end_latency_s", "throughput_jobs_per_s"]
+        ].mean().round(3)
+        print(f"Completed {len(runs):,} runs and recorded {len(attempts):,} attempts.")
+        print(f"Readable report: {report_path}")
+        print(headline.to_string(index=False))
 
 
 if __name__ == "__main__":
