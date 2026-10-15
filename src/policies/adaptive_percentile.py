@@ -9,6 +9,7 @@ from .base import TimeoutDecision, VisibilityPolicy
 
 class AdaptivePercentilePolicy(VisibilityPolicy):
     name = "adaptive_p90"
+    predicts_duration = True
 
     def __init__(
         self,

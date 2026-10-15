@@ -6,8 +6,6 @@ import uuid
 from dataclasses import asdict
 from typing import Any
 
-import numpy as np
-
 from .failure_model import FailureModel
 from .idempotency import InMemoryIdempotencyLedger
 from .message import DeliveryAttempt, Message
@@ -37,7 +35,7 @@ class SQSSimulator:
         self.policy = policy
         self.failure_model = failure_model
         self.worker_ids = [f"worker-{i:02d}" for i in range(workers)]
-        self.rng = np.random.default_rng(seed)
+        self.seed = int(seed)
         self.ledger = InMemoryIdempotencyLedger()
         self.events: list[tuple[float, int, str, Any]] = []
         self.counter = itertools.count()
@@ -61,10 +59,10 @@ class SQSSimulator:
         idle = [w for w in self.worker_ids if w not in self.busy]
         self.visible.sort(key=lambda m: (m.creation_time, m.job_id))
         while idle and self.visible:
-            worker_id = idle.pop(0)
             message = self.visible.pop(0)
             if message.job_id in self.deleted:
-                continue
+                continue  # stale copy; keep the worker for the next visible message
+            worker_id = idle.pop(0)
             receive_count = self.receive_counts.get(message.job_id, 0) + 1
             self.receive_counts[message.job_id] = receive_count
             self.api_operations["receive"] += 1
@@ -93,7 +91,7 @@ class SQSSimulator:
             if message.job_id in self.last_failure:
                 self.failure_recoveries.append(self.now - self.last_failure.pop(message.job_id))
             self._push(attempt.visibility_deadline, "visibility_expire", attempt_id)
-            failure = self.failure_model.sample(self.rng)
+            failure = self.failure_model.sample_for(self.seed, message.job_id, receive_count)
             if failure.fails:
                 self._push(self.now + message.processing_duration * failure.fraction, "fail", attempt_id)
             else:
@@ -214,4 +212,5 @@ class SQSSimulator:
             "completed_jobs": len(self.ledger),
             "deleted_jobs": len(self.deleted),
             "event_limit_reached": processed >= safety_events,
+            "policy_predicts_duration": self.policy.predicts_duration,
         }

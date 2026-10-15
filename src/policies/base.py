@@ -13,6 +13,9 @@ class TimeoutDecision:
 
 class VisibilityPolicy(ABC):
     name = "base"
+    # Static policies report their timeout as the "prediction"; prediction-error
+    # and adaptation metrics are only meaningful for policies that estimate duration.
+    predicts_duration = False
     heartbeat_interval: float | None = None
     max_extensions: int = 0
     max_total_visibility: float = 0.0
