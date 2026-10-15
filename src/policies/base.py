@@ -30,6 +30,14 @@ class VisibilityPolicy(ABC):
     def extension_timeout(self, job_type: str, now: float) -> float:
         return self.decide(job_type, now).timeout
 
+    def heartbeat_interval_for(self, job_type: str, now: float) -> float | None:
+        """Heartbeat period for a newly received message; None disables heartbeats."""
+        return self.heartbeat_interval
+
+    def max_total_visibility_for(self, job_type: str, now: float) -> float:
+        """Visibility budget measured from receive: no extension may pass it."""
+        return self.max_total_visibility
+
     def clone(self) -> "VisibilityPolicy":
         import copy
 

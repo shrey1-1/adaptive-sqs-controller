@@ -149,8 +149,11 @@ class ExperimentIntegrationTests(unittest.TestCase):
         self.assertEqual(set(runs[runs.scenario == "sweep"].policy_name), {"adaptive_p90", "adaptive_p75"})
         self.assertIn("steady_duplicate_processing_rate", runs)
         self.assertIn("pareto_optimal_dup_vs_recovery", aggregates)
-        self.assertTrue((paired["reference"] == "adaptive_p90").all())
-        self.assertEqual(set(paired[paired.scenario == "sweep"].comparator), {"adaptive_p75"})
+        self.assertEqual(set(paired["reference"]), {"adaptive_p90", "adaptive_heartbeat"})
+        # The sweep scenario filters out adaptive_heartbeat, so only adaptive_p90 references it.
+        sweep = paired[paired.scenario == "sweep"]
+        self.assertEqual(set(sweep.reference), {"adaptive_p90"})
+        self.assertEqual(set(sweep.comparator), {"adaptive_p75"})
 
 
 if __name__ == "__main__":

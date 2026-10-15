@@ -2,45 +2,178 @@
   "n_messages": 200,
   "workers": 10,
   "arrival_rate": 1.2,
-  "seeds": [11, 22, 33, 44, 55, 66, 77, 88, 99, 110, 121, 132, 143, 154, 165, 176, 187, 198, 209, 220],
+  "seeds": [
+    11,
+    22,
+    33,
+    44,
+    55,
+    66,
+    77,
+    88,
+    99,
+    110,
+    121,
+    132,
+    143,
+    154,
+    165,
+    176,
+    187,
+    198,
+    209,
+    220
+  ],
   "safety_margin": 2.0,
   "history_window": 40,
   "warmup_fraction": 0.2,
   "calibration_fraction": 0.2,
-  "paired_reference": "adaptive_p90",
+  "paired_reference": [
+    "adaptive_p90",
+    "adaptive_heartbeat"
+  ],
   "scenarios": {
-    "mostly_short_no_failure": {"workload": "mostly_short", "failure": "none"},
-    "mixed_no_failure": {"workload": "mixed", "failure": "none"},
-    "heavy_tailed_no_failure": {"workload": "heavy_tailed", "failure": "none"},
-    "mixed_with_failures": {"workload": "mixed", "failure": "medium"},
-    "heavy_tailed_with_failures": {"workload": "heavy_tailed", "failure": "medium"},
-    "sudden_shift": {"workload": "sudden_shift", "failure": "low"},
+    "mostly_short_no_failure": {
+      "workload": "mostly_short",
+      "failure": "none"
+    },
+    "mixed_no_failure": {
+      "workload": "mixed",
+      "failure": "none"
+    },
+    "heavy_tailed_no_failure": {
+      "workload": "heavy_tailed",
+      "failure": "none"
+    },
+    "mixed_with_failures": {
+      "workload": "mixed",
+      "failure": "medium"
+    },
+    "heavy_tailed_with_failures": {
+      "workload": "heavy_tailed",
+      "failure": "medium"
+    },
+    "sudden_shift": {
+      "workload": "sudden_shift",
+      "failure": "low"
+    },
+    "mixed_with_hangs": {
+      "workload": "mixed",
+      "failure": "low",
+      "hang": "medium"
+    },
+    "heavy_tailed_with_hangs": {
+      "workload": "heavy_tailed",
+      "failure": "low",
+      "hang": "medium"
+    },
+    "sudden_shift_with_hangs": {
+      "workload": "sudden_shift",
+      "failure": "low",
+      "hang": "medium"
+    },
     "margin_sweep": {
-      "workload": "mixed", "failure": "medium", "safety_margins": [0.0, 1.0, 2.0, 4.0],
-      "policies": ["adaptive_p90", "adaptive_p90_relative", "pretuned_per_class"]
+      "workload": "mixed",
+      "failure": "medium",
+      "safety_margins": [
+        0.0,
+        1.0,
+        2.0,
+        4.0
+      ],
+      "policies": [
+        "adaptive_p90",
+        "adaptive_p90_relative",
+        "pretuned_per_class"
+      ]
     },
     "window_sweep": {
-      "workload": "sudden_shift", "failure": "low", "history_windows": [10, 25, 50, 100],
-      "policies": ["adaptive_p90", "adaptive_p90_relative", "pretuned_per_class"]
+      "workload": "sudden_shift",
+      "failure": "low",
+      "history_windows": [
+        10,
+        25,
+        50,
+        100
+      ],
+      "policies": [
+        "adaptive_p90",
+        "adaptive_p90_relative",
+        "pretuned_per_class"
+      ]
     },
     "percentile_sweep": {
-      "workload": "mixed", "failure": "medium",
+      "workload": "mixed",
+      "failure": "medium",
       "adaptive_variants": {
-        "adaptive_p75": {"percentile": 75},
-        "adaptive_p80": {"percentile": 80},
-        "adaptive_p95": {"percentile": 95},
-        "adaptive_p99": {"percentile": 99}
+        "adaptive_p75": {
+          "percentile": 75
+        },
+        "adaptive_p80": {
+          "percentile": 80
+        },
+        "adaptive_p95": {
+          "percentile": 95
+        },
+        "adaptive_p99": {
+          "percentile": 99
+        }
       },
-      "policies": ["adaptive_p75", "adaptive_p80", "adaptive_p90", "adaptive_p95", "adaptive_p99"]
+      "policies": [
+        "adaptive_p75",
+        "adaptive_p80",
+        "adaptive_p90",
+        "adaptive_p95",
+        "adaptive_p99"
+      ]
     },
     "min_history_sweep": {
-      "workload": "mixed", "failure": "medium",
+      "workload": "mixed",
+      "failure": "medium",
       "adaptive_variants": {
-        "adaptive_h2": {"min_history": 2},
-        "adaptive_h10": {"min_history": 10},
-        "adaptive_h20": {"min_history": 20}
+        "adaptive_h2": {
+          "min_history": 2
+        },
+        "adaptive_h10": {
+          "min_history": 10
+        },
+        "adaptive_h20": {
+          "min_history": 20
+        }
       },
-      "policies": ["adaptive_h2", "adaptive_p90", "adaptive_h10", "adaptive_h20"]
+      "policies": [
+        "adaptive_h2",
+        "adaptive_p90",
+        "adaptive_h10",
+        "adaptive_h20"
+      ]
+    },
+    "budget_sweep": {
+      "workload": "heavy_tailed",
+      "failure": "low",
+      "hang": "medium",
+      "adaptive_variants": {
+        "adaptive_heartbeat_b1.0": {
+          "type": "heartbeat",
+          "budget_factor": 1.0
+        },
+        "adaptive_heartbeat_b1.5": {
+          "type": "heartbeat",
+          "budget_factor": 1.5
+        },
+        "adaptive_heartbeat_b2.0": {
+          "type": "heartbeat",
+          "budget_factor": 2.0
+        }
+      },
+      "policies": [
+        "adaptive_heartbeat_b1.0",
+        "adaptive_heartbeat",
+        "adaptive_heartbeat_b1.5",
+        "adaptive_heartbeat_b2.0",
+        "adaptive_heartbeat_fixed_budget",
+        "fixed_heartbeat"
+      ]
     }
   }
 }

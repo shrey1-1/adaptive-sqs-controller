@@ -54,7 +54,9 @@ Seeded workload -> simulated visible queue -> workers -> attempts/results
 - `pretuned_per_class`: the **realistic** static baseline, fitted to the first 20% of an independent pilot workload, so it never sees evaluated jobs and goes stale after a shift.
 - `adaptive_p90`: rolling class-specific P90 plus a 2 s margin with cold-start fallback.
 - `adaptive_p90_relative`: the same controller with a margin of 25% of the predicted P90, so protection scales with class duration.
-- `fixed_heartbeat`: a fixed initial lease with bounded extensions.
+- `fixed_heartbeat`: a fixed 5 s lease renewed every 3.5 s, at most 4 extensions (40 s cap).
+- `adaptive_heartbeat`: per-class lease min(5 s, P90 + margin), heartbeat at 70% of the lease, and a per-class visibility budget of P99 × 1.25 + 2 s (capped at 40 s). Short classes finish inside their first lease; long classes renew; a hung worker is reclaimed after about its class's worst normal duration.
+- `adaptive_heartbeat_fixed_budget`: ablation with the adaptive lease but the global 40 s budget.
 
 ## Workloads and failures
 
@@ -148,7 +150,30 @@ These results do **not** support a blanket claim that adaptation wins. The optim
 5. **Heavy tails defeat any per-class P90.** Adaptive, pre-tuned and oracle policies all land near 8–9% duplicates, because the 10% of jobs above P90 are exactly the ones that overrun.
 6. **Sensitivity sweeps behave as expected.** Raising the percentile (P75 to P99) or the margin (0 to 4 s) traces a smooth curve with fewer duplicates and slower recovery. After a shift, windows of 10–25 observations beat 100. The 25% relative margin was no better than the 2 s absolute margin, and was worse for mostly-short jobs (1.6% vs 0.2%).
 
-These results motivate Phase 3 (an adaptive lease with heartbeat extension) and Phase 4 (cost-aware percentile selection and change-point detection).
+These results motivated Phase 3 below and Phase 4 (cost-aware percentile selection and change-point detection).
+
+### Phase 3: adaptive heartbeat and hung workers (20 seeds)
+
+Phase 3 added **hung workers**: an attempt stops progressing but its heartbeat thread stays alive, so it keeps extending the lease until the policy's visibility budget runs out, after which the worker is restarted. Without hangs, an unlimited heartbeat budget is free in simulation; hangs are what make the budget a real trade-off. Phase 3 also fixed a bias: attempts destined to crash previously never heartbeated, which understated heartbeat policies' crash-recovery time (fixed heartbeat, sudden shift: 2.4 s before the fix, 3.5 s after).
+
+| Scenario | Policy | Duplicates | Mean recovery (s) | Hang recovery (s) | Mean latency (s) |
+|---|---|---:|---:|---:|---:|
+| Mixed, medium crashes | Adaptive heartbeat | 0.002 | 3.21 | n/a | 5.75 |
+| Mixed, medium crashes | Fixed heartbeat | 0.027 | 3.88 | n/a | 5.98 |
+| Mixed, medium crashes | Adaptive P90 | 0.040 | 6.45 | n/a | 6.45 |
+| Mixed, medium hangs | Adaptive heartbeat | 0.002 | 9.47 | 10.89 | 6.95 |
+| Mixed, medium hangs | Fixed heartbeat | 0.023 | 14.13 | 16.33 | 8.93 |
+| Mixed, medium hangs | Adaptive lease, fixed budget | 0.000 | 30.91 | 36.88 | 15.29 |
+| Heavy-tailed, medium hangs | Adaptive heartbeat | 0.022 | 17.67 | 20.80 | 13.74 |
+| Heavy-tailed, medium hangs | Fixed heartbeat | 0.021 | 14.16 | 16.46 | 12.52 |
+
+1. **On mixed workloads, adaptive heartbeat beats fixed heartbeat on every axis.** With crashes it had 2.5 percentage points fewer duplicates, recovered 0.7 s faster and had 0.2 s lower latency (19–20 of 20 seeds, Holm *p*≤0.003 for recovery and latency). With hangs it had 2.2 points fewer duplicates, recovered 4.7 s faster and had 2.0 s lower latency, better in all 20 seeds (Holm *p*=0.002). It is the first adaptive policy to beat the heartbeat baseline.
+2. **The adaptive budget is what handles hangs.** With the global 40 s budget, hung jobs took 37 s to recover. The per-class budget cut that by 18–21 s on mixed and shifting workloads (all 20 seeds, *p*=0.002), at a cost of 0.2–0.7 points more duplicates.
+3. **Heavy tails remain the weak spot.** The P99 budget of a Pareto class is long, so hang recovery was 3.5 s slower than fixed heartbeat (2 of 20 seeds better; not significant after Holm). After a sudden shift, adaptive heartbeat was within noise of fixed heartbeat on recovery but 0.7 s slower on latency.
+4. **Without hangs, the fixed-budget ablation is best.** It has near-zero duplicates and the same crash recovery. In simulation the budget costs nothing until workers can hang.
+5. **The budget factor traces a clean trade-off.** On heavy-tailed workloads with hangs, raising it from 1.0 to 2.0 cut duplicates from 3.1% to 0.8% but raised hang recovery from 17.4 s to 29.1 s.
+
+Heartbeat policies pay about one extra queue API call per job (≈4.1–5.2 versus ≈3.1 calls per completed job).
 
 ## Limitations
 

@@ -11,6 +11,7 @@ import pandas as pd
 from .failure_model import FailureModel
 from .metrics import aggregate_runs, summarize_run
 from .policies import (
+    AdaptiveHeartbeatPolicy,
     AdaptivePercentilePolicy,
     ClassBasedPolicy,
     FixedHeartbeatPolicy,
@@ -18,7 +19,7 @@ from .policies import (
     MeanFixedPolicy,
 )
 from .simulator import SQSSimulator
-from .stats import paired_comparisons, pareto_optimal
+from .stats import holm_adjust, paired_comparisons, pareto_optimal
 from .workload import WorkloadSpec, generate_workload, oracle_class_timeouts, pretuned_class_timeouts
 
 
@@ -33,8 +34,10 @@ DEFAULT_SCENARIOS = {
 
 
 # Extra adaptive configurations run alongside `adaptive_p90`. Keys are policy
-# names; values override AdaptivePercentilePolicy arguments. Scenarios may add
-# their own via an "adaptive_variants" entry (used for sensitivity sweeps).
+# names; values override AdaptivePercentilePolicy arguments, or
+# AdaptiveHeartbeatPolicy arguments when they include "type": "heartbeat".
+# Scenarios may add their own via an "adaptive_variants" entry (used for
+# sensitivity sweeps).
 DEFAULT_ADAPTIVE_VARIANTS = {
     "adaptive_p90_relative": {"safety_margin": 0.0, "relative_margin": 0.25},
 }
@@ -71,10 +74,23 @@ def build_policies(
             )
         )
     policies.append(AdaptivePercentilePolicy(**adaptive_defaults))
+    # Heartbeat policies share the fixed heartbeat's 5 s lease and 40 s global
+    # cap so the comparison isolates what adaptation adds.
+    heartbeat_defaults = dict(
+        safety_margin=safety_margin, history_window=history_window, min_history=5,
+        lease_cap=5.0, default_lease=5.0, max_total_visibility=40.0,
+    )
+    policies.append(AdaptiveHeartbeatPolicy(**heartbeat_defaults))
+    policies.append(AdaptiveHeartbeatPolicy(name="adaptive_heartbeat_fixed_budget", adaptive_budget=False, **heartbeat_defaults))
     for name, overrides in (adaptive_variants or {}).items():
-        params = {**adaptive_defaults, **overrides}
+        overrides = dict(overrides)
+        if overrides.pop("type", "percentile") == "heartbeat":
+            cls, base = AdaptiveHeartbeatPolicy, heartbeat_defaults
+        else:
+            cls, base = AdaptivePercentilePolicy, adaptive_defaults
+        params = {**base, **overrides}
         params["history_window"] = max(int(params["history_window"]), int(params["min_history"]))
-        policies.append(AdaptivePercentilePolicy(name=name, **params))
+        policies.append(cls(name=name, **params))
     policies.append(FixedHeartbeatPolicy(5.0, heartbeat_interval=3.5, max_extensions=4, max_total_visibility=40.0))
     return policies
 
@@ -119,7 +135,7 @@ def run_experiments(config: dict[str, Any], output_dir: str | Path) -> tuple[pd.
                         sim = SQSSimulator(
                             messages,
                             policy,
-                            FailureModel.from_level(scenario["failure"]),
+                            FailureModel.from_level(scenario["failure"], scenario.get("hang", "none")),
                             workers=int(config.get("workers", 8)),
                             seed=seed + 1000,
                         )
@@ -143,7 +159,11 @@ def run_experiments(config: dict[str, Any], output_dir: str | Path) -> tuple[pd.
     run_df = pd.DataFrame(run_rows)
     aggregate_df = aggregate_runs(run_df)
     aggregate_df["pareto_optimal_dup_vs_recovery"] = _pareto_flags(aggregate_df)
-    paired_df = paired_comparisons(run_df, reference=config.get("paired_reference", "adaptive_p90"))
+    references = config.get("paired_reference", ["adaptive_p90", "adaptive_heartbeat"])
+    references = [references] if isinstance(references, str) else list(references)
+    paired_df = pd.concat([paired_comparisons(run_df, reference=r) for r in references], ignore_index=True)
+    if not paired_df.empty:
+        paired_df["p_holm"] = holm_adjust(paired_df["p_value"])  # family = every test in the file
     attempt_df.to_csv(output_dir / "attempt_metrics.csv", index=False)
     run_df.to_csv(output_dir / "run_metrics.csv", index=False)
     aggregate_df.to_csv(output_dir / "aggregate_metrics.csv", index=False)

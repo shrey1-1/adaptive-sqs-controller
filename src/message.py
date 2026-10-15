@@ -33,4 +33,7 @@ class DeliveryAttempt:
     finish_time: Optional[float] = None
     failure_time: Optional[float] = None
     last_extension_time: Optional[float] = None
+    heartbeat_interval: Optional[float] = None
+    visibility_budget: float = 0.0
+    hung: bool = False
 

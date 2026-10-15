@@ -21,6 +21,8 @@ def summarize_run(
     end_to_end = completed["completion_time"] - completed["send_time"]
     failures = df[df["worker_failure"]]
     recoveries = np.asarray(sim_result["failure_recoveries"], dtype=float)
+    kinds = np.asarray(sim_result.get("failure_recovery_kinds", ["crash"] * recoveries.size))
+    hang_recoveries = recoveries[kinds == "hang"] if recoveries.size else recoveries
     api_total = sum(sim_result["api_operations"].values())
     makespan = max(float(sim_result["simulation_end"]), 1e-12)
     prediction_error = np.abs(
@@ -62,6 +64,9 @@ def summarize_run(
         "queue_api_operations_per_completed_message": api_total / max(completed_jobs, 1),
         "adaptation_time_s": adaptation_time,
         "worker_failures": float(len(failures)),
+        "worker_hangs": float(sim_result.get("worker_hangs", 0)),
+        "mean_hang_recovery_time_s": float(hang_recoveries.mean()) if hang_recoveries.size else math.nan,
+        "p95_hang_recovery_time_s": float(np.percentile(hang_recoveries, 95)) if hang_recoveries.size else math.nan,
         "event_limit_reached": float(bool(sim_result["event_limit_reached"])),
         **_steady_state_metrics(sim_result, df, predicts, warmup_fraction),
     }

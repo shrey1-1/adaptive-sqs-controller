@@ -48,6 +48,9 @@ class SQSSimulator:
         self.deleted: set[str] = set()
         self.active_by_job: dict[str, set[str]] = {}
         self.last_failure: dict[str, float] = {}
+        self.last_failure_kind: dict[str, str] = {}
+        self.failure_recovery_kinds: list[str] = []
+        self.worker_hangs = 0
         self.failure_recoveries: list[float] = []
         self.failure_recovery_job_ids: list[str] = []
         self.rows: list[dict[str, Any]] = []
@@ -84,6 +87,8 @@ class SQSSimulator:
                 receive_count=receive_count,
                 duplicate_delivery=receive_count > 1,
                 duplicate_processing=bool(active),
+                heartbeat_interval=self.policy.heartbeat_interval_for(message.job_type, self.now),
+                visibility_budget=self.policy.max_total_visibility_for(message.job_type, self.now),
             )
             self.attempts[attempt_id] = attempt
             active.add(attempt_id)
@@ -92,14 +97,19 @@ class SQSSimulator:
             if message.job_id in self.last_failure:
                 self.failure_recoveries.append(self.now - self.last_failure.pop(message.job_id))
                 self.failure_recovery_job_ids.append(message.job_id)
+                self.failure_recovery_kinds.append(self.last_failure_kind.pop(message.job_id, "crash"))
             self._push(attempt.visibility_deadline, "visibility_expire", attempt_id)
             failure = self.failure_model.sample_for(self.seed, message.job_id, receive_count)
             if failure.fails:
                 self._push(self.now + message.processing_duration * failure.fraction, "fail", attempt_id)
+            elif failure.hangs:
+                self._push(self.now + message.processing_duration * failure.fraction, "hang", attempt_id)
             else:
                 self._push(self.now + message.processing_duration, "complete", attempt_id)
-                if self.policy.heartbeat_interval:
-                    self._push(self.now + self.policy.heartbeat_interval, "heartbeat", attempt_id)
+            # Every attempt heartbeats, including ones that will later crash: a real
+            # worker keeps extending its lease right up to the moment it dies.
+            if attempt.heartbeat_interval:
+                self._push(self.now + attempt.heartbeat_interval, "heartbeat", attempt_id)
 
     def _record(self, attempt: DeliveryAttempt, success: bool, committed: bool) -> None:
         message = attempt.message
@@ -122,6 +132,7 @@ class SQSSimulator:
             "number_of_timeout_extensions": attempt.extensions,
             "receive_count": attempt.receive_count,
             "worker_failure": attempt.failed,
+            "worker_hang": attempt.hung,
             "duplicate_delivery": attempt.duplicate_delivery,
             "duplicate_processing": attempt.duplicate_processing,
             "successful_completion": success,
@@ -138,6 +149,24 @@ class SQSSimulator:
         self.busy.pop(attempt.worker_id, None)
         self.active_by_job.get(attempt.message.job_id, set()).discard(attempt.attempt_id)
         self.last_failure[attempt.message.job_id] = self.now
+        self.last_failure_kind[attempt.message.job_id] = "crash"
+        self._record(attempt, False, False)
+
+    def _on_hang(self, attempt: DeliveryAttempt) -> None:
+        """Progress stops but the worker stays busy and keeps heartbeating."""
+        if attempt.completed or attempt.failed:
+            return
+        attempt.hung = True
+        attempt.failure_time = self.now
+        self.worker_hangs += 1
+        self.last_failure[attempt.message.job_id] = self.now
+        self.last_failure_kind[attempt.message.job_id] = "hang"
+
+    def _release_hung(self, attempt: DeliveryAttempt) -> None:
+        """The hung worker is restarted once its lease finally expires."""
+        attempt.failed = True
+        self.busy.pop(attempt.worker_id, None)
+        self.active_by_job.get(attempt.message.job_id, set()).discard(attempt.attempt_id)
         self._record(attempt, False, False)
 
     def _on_complete(self, attempt: DeliveryAttempt) -> None:
@@ -157,20 +186,25 @@ class SQSSimulator:
 
     def _on_visibility_expire(self, attempt: DeliveryAttempt) -> None:
         job_id = attempt.message.job_id
-        if job_id in self.deleted or attempt.failed and self.current_receipt.get(job_id) != attempt.receipt_handle:
-            return
         if abs(attempt.visibility_deadline - self.now) > 1e-9:
             return  # stale expiry event after ChangeMessageVisibility
+        if attempt.hung and not attempt.failed:
+            self._release_hung(attempt)
+        if job_id in self.deleted:
+            return
         if self.current_receipt.get(job_id) == attempt.receipt_handle:
             self.visible.append(attempt.message)
 
     def _on_heartbeat(self, attempt: DeliveryAttempt) -> None:
-        if attempt.failed or attempt.completed or attempt.message.job_id in self.deleted:
+        job_id = attempt.message.job_id
+        if attempt.failed or attempt.completed or job_id in self.deleted:
             return
+        if self.current_receipt.get(job_id) != attempt.receipt_handle:
+            return  # lease already lost to a newer receive; SQS rejects the stale handle
         if attempt.extensions >= self.policy.max_extensions:
             return
         proposed = self.now + self.policy.extension_timeout(attempt.message.job_type, self.now)
-        cap = attempt.start_time + self.policy.max_total_visibility
+        cap = attempt.start_time + attempt.visibility_budget
         new_deadline = min(proposed, cap)
         if new_deadline > attempt.visibility_deadline:
             attempt.extensions += 1
@@ -178,8 +212,8 @@ class SQSSimulator:
             attempt.visibility_deadline = new_deadline
             self.api_operations["change_visibility"] += 1
             self._push(new_deadline, "visibility_expire", attempt.attempt_id)
-        if attempt.extensions < self.policy.max_extensions:
-            self._push(self.now + float(self.policy.heartbeat_interval), "heartbeat", attempt.attempt_id)
+        if attempt.extensions < self.policy.max_extensions and attempt.visibility_deadline < cap - 1e-9:
+            self._push(self.now + float(attempt.heartbeat_interval), "heartbeat", attempt.attempt_id)
 
     def run(self) -> dict[str, Any]:
         for message in self.messages:
@@ -197,6 +231,8 @@ class SQSSimulator:
                 attempt = self.attempts[payload]
                 if event == "fail":
                     self._on_failure(attempt)
+                elif event == "hang":
+                    self._on_hang(attempt)
                 elif event == "complete":
                     self._on_complete(attempt)
                 elif event == "visibility_expire":
@@ -211,6 +247,8 @@ class SQSSimulator:
             "api_operations": dict(self.api_operations),
             "failure_recoveries": list(self.failure_recoveries),
             "failure_recovery_job_ids": list(self.failure_recovery_job_ids),
+            "failure_recovery_kinds": list(self.failure_recovery_kinds),
+            "worker_hangs": self.worker_hangs,
             "job_ids_in_send_order": [m.job_id for m in sorted(self.messages, key=lambda m: (m.creation_time, m.job_id))],
             "simulation_end": self.now,
             "completed_jobs": len(self.ledger),
