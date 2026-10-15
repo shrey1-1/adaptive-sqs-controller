@@ -7,7 +7,11 @@ import numpy as np
 import pandas as pd
 
 
-def summarize_run(sim_result: dict[str, Any], shift_time: float | None = None) -> dict[str, float]:
+def summarize_run(
+    sim_result: dict[str, Any],
+    shift_time: float | None = None,
+    warmup_fraction: float = 0.2,
+) -> dict[str, float]:
     df = pd.DataFrame(sim_result["attempt_rows"])
     completed = df[df["committed_result"]]
     successful_attempts = df[df["successful_completion"]]
@@ -59,7 +63,53 @@ def summarize_run(sim_result: dict[str, Any], shift_time: float | None = None) -
         "adaptation_time_s": adaptation_time,
         "worker_failures": float(len(failures)),
         "event_limit_reached": float(bool(sim_result["event_limit_reached"])),
+        **_steady_state_metrics(sim_result, df, predicts, warmup_fraction),
     }
+
+
+STEADY_STATE_METRICS = (
+    "duplicate_processing_rate",
+    "mean_end_to_end_latency_s",
+    "p95_end_to_end_latency_s",
+    "mean_failure_recovery_time_s",
+    "mean_absolute_prediction_error_s",
+)
+
+
+def _steady_state_metrics(
+    sim_result: dict[str, Any], df: pd.DataFrame, predicts: bool, warmup_fraction: float
+) -> dict[str, float]:
+    """Key metrics restricted to jobs sent after the first `warmup_fraction` of jobs.
+
+    Separates cold-start cost (before the adaptive controller has history) from
+    steady-state behaviour. Every policy is filtered identically, so the
+    comparison stays paired. Columns are prefixed `steady_`.
+    """
+    if not 0 <= warmup_fraction < 1:
+        raise ValueError("warmup_fraction must be in [0, 1)")
+    order = sim_result.get("job_ids_in_send_order") or []
+    keep = set(order[int(len(order) * warmup_fraction):])
+    steady = df[df["job_id"].isin(keep)] if len(df) else df
+    committed = steady[steady["committed_result"]] if len(steady) else steady
+    successful = steady[steady["successful_completion"]] if len(steady) else steady
+    end_to_end = committed["completion_time"] - committed["send_time"] if len(committed) else pd.Series(dtype=float)
+    recoveries = np.asarray(
+        [t for t, job in zip(sim_result["failure_recoveries"], sim_result.get("failure_recovery_job_ids", [])) if job in keep],
+        dtype=float,
+    )
+    error = (
+        (successful["actual_processing_duration"] - successful["predicted_processing_duration"]).abs()
+        if predicts and len(successful)
+        else pd.Series(dtype=float)
+    )
+    values = {
+        "duplicate_processing_rate": float(steady["duplicate_processing"].mean()) if len(steady) else math.nan,
+        "mean_end_to_end_latency_s": float(end_to_end.mean()) if len(end_to_end) else math.nan,
+        "p95_end_to_end_latency_s": float(end_to_end.quantile(0.95)) if len(end_to_end) else math.nan,
+        "mean_failure_recovery_time_s": float(recoveries.mean()) if recoveries.size else math.nan,
+        "mean_absolute_prediction_error_s": float(error.mean()) if len(error) else math.nan,
+    }
+    return {f"steady_{key}": values[key] for key in STEADY_STATE_METRICS}
 
 
 def _betacf(a: float, b: float, x: float) -> float:

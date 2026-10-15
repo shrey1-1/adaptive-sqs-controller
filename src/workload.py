@@ -91,3 +91,27 @@ def oracle_class_timeouts(messages: list[Message], margin: float = 2.0) -> dict[
         grouped.setdefault(message.job_type, []).append(message.processing_duration)
     return {key: float(np.percentile(values, 90) + margin) for key, values in grouped.items()}
 
+
+PILOT_SEED_OFFSET = 500_000
+
+
+def pretuned_class_timeouts(
+    spec: WorkloadSpec,
+    seed: int,
+    margin: float = 2.0,
+    calibration_fraction: float = 0.2,
+) -> dict[str, float]:
+    """Realistic static baseline: P90 + margin per class, fitted to the first
+    `calibration_fraction` of an independent pilot workload.
+
+    This mimics an operator tuning timeouts from a calibration period observed
+    before deployment. It never sees the evaluated jobs, and under a later
+    workload shift its timeouts go stale exactly as a hand-tuned config would.
+    Classes absent from the calibration window fall back to the policy default.
+    """
+    if not 0 < calibration_fraction <= 1:
+        raise ValueError("calibration_fraction must be in (0, 1]")
+    pilot, _ = generate_workload(spec, seed + PILOT_SEED_OFFSET, "pilot")
+    calibration = pilot[: max(1, int(len(pilot) * calibration_fraction))]
+    return oracle_class_timeouts(calibration, margin)
+

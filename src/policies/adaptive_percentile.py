@@ -23,13 +23,25 @@ class AdaptivePercentilePolicy(VisibilityPolicy):
         heartbeat_interval: float | None = None,
         max_extensions: int = 2,
         max_total_visibility: float = 180.0,
+        relative_margin: float = 0.0,
+        mad_multiplier: float = 0.0,
+        name: str | None = None,
     ) -> None:
         if not 0 < percentile <= 100:
             raise ValueError("percentile must be in (0, 100]")
         if history_window < min_history or min_history < 1:
             raise ValueError("history_window must be >= min_history >= 1")
+        if safety_margin < 0 or relative_margin < 0 or mad_multiplier < 0:
+            raise ValueError("margins must be non-negative")
+        if name:
+            self.name = name
         self.percentile = float(percentile)
         self.safety_margin = float(safety_margin)
+        # Margin components add together. An absolute margin alone over-protects
+        # short classes and under-protects long ones; the relative and MAD terms
+        # scale with each class's typical duration and spread respectively.
+        self.relative_margin = float(relative_margin)
+        self.mad_multiplier = float(mad_multiplier)
         self.min_timeout = float(min_timeout)
         self.max_timeout = float(max_timeout)
         self.default_timeout = float(default_timeout)
@@ -46,12 +58,20 @@ class AdaptivePercentilePolicy(VisibilityPolicy):
         values = self.history[job_type]
         if len(values) < self.min_history:
             return TimeoutDecision(self.default_timeout, self.default_timeout, True)
-        prediction = float(np.percentile(np.asarray(values), self.percentile))
+        samples = np.asarray(values)
+        prediction = float(np.percentile(samples, self.percentile))
         timeout = min(
             self.max_timeout,
-            max(self.min_timeout, prediction + self.safety_margin),
+            max(self.min_timeout, prediction + self.margin(samples, prediction)),
         )
         return TimeoutDecision(timeout, prediction, False)
+
+    def margin(self, samples: np.ndarray, prediction: float) -> float:
+        margin = self.safety_margin + self.relative_margin * prediction
+        if self.mad_multiplier:
+            mad = float(np.median(np.abs(samples - np.median(samples))))
+            margin += self.mad_multiplier * mad
+        return margin
 
     def observe(self, job_type: str, duration: float, now: float) -> None:
         self.history[job_type].append(float(duration))

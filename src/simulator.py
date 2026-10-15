@@ -49,6 +49,7 @@ class SQSSimulator:
         self.active_by_job: dict[str, set[str]] = {}
         self.last_failure: dict[str, float] = {}
         self.failure_recoveries: list[float] = []
+        self.failure_recovery_job_ids: list[str] = []
         self.rows: list[dict[str, Any]] = []
         self.api_operations = {"send": 0, "receive": 0, "delete": 0, "change_visibility": 0}
 
@@ -90,6 +91,7 @@ class SQSSimulator:
             self.busy[worker_id] = attempt_id
             if message.job_id in self.last_failure:
                 self.failure_recoveries.append(self.now - self.last_failure.pop(message.job_id))
+                self.failure_recovery_job_ids.append(message.job_id)
             self._push(attempt.visibility_deadline, "visibility_expire", attempt_id)
             failure = self.failure_model.sample_for(self.seed, message.job_id, receive_count)
             if failure.fails:
@@ -208,6 +210,8 @@ class SQSSimulator:
             "attempt_rows": self.rows,
             "api_operations": dict(self.api_operations),
             "failure_recoveries": list(self.failure_recoveries),
+            "failure_recovery_job_ids": list(self.failure_recovery_job_ids),
+            "job_ids_in_send_order": [m.job_id for m in sorted(self.messages, key=lambda m: (m.creation_time, m.job_id))],
             "simulation_end": self.now,
             "completed_jobs": len(self.ledger),
             "deleted_jobs": len(self.deleted),

@@ -15,7 +15,7 @@ a { color: #1769aa; } .note { color: #475569; }
 <h1>Adaptive SQS Visibility Timeout Controller</h1>
 <p class="note">Readable summary generated from executed simulation results. Detailed attempt-level data remains in the CSV files beside this report.</p>
 <div class="card"><h2>Experiment overview</h2>
-<p><b>Runs:</b> 36 &nbsp; <b>Attempt records:</b> 2,210 &nbsp; <b>Scenarios:</b> 3 &nbsp; <b>Policies:</b> 6</p>
+<p><b>Runs:</b> 48 &nbsp; <b>Attempt records:</b> 2,867 &nbsp; <b>Scenarios:</b> 3 &nbsp; <b>Policies:</b> 8</p>
 </div>
 <div class="card"><h2>Policy comparison</h2><table border="1" class="dataframe summary">
   <thead>
@@ -24,11 +24,13 @@ a { color: #1769aa; } .note { color: #475569; }
       <th>Policy</th>
       <th>Seeds</th>
       <th>Duplicate processing rate</th>
+      <th>Duplicate rate after warm-up</th>
       <th>Mean latency (s)</th>
       <th>P95 latency (s)</th>
       <th>Throughput (jobs/s)</th>
       <th>Mean recovery (s)</th>
       <th>API operations / job</th>
+      <th>Pareto-optimal</th>
     </tr>
   </thead>
   <tbody>
@@ -37,198 +39,1086 @@ a { color: #1769aa; } .note { color: #475569; }
       <td>adaptive_p90</td>
       <td>2</td>
       <td>0.074</td>
+      <td>0.059</td>
       <td>6.278</td>
       <td>17.316</td>
       <td>0.778</td>
       <td>—</td>
       <td>3.08</td>
+      <td>False</td>
+    </tr>
+    <tr>
+      <td>mixed_no_failure</td>
+      <td>adaptive_p90_relative</td>
+      <td>2</td>
+      <td>0.074</td>
+      <td>0.059</td>
+      <td>6.278</td>
+      <td>17.316</td>
+      <td>0.778</td>
+      <td>—</td>
+      <td>3.08</td>
+      <td>False</td>
     </tr>
     <tr>
       <td>mixed_no_failure</td>
       <td>fixed_heartbeat</td>
       <td>2</td>
       <td>0.010</td>
+      <td>0.012</td>
       <td>4.674</td>
       <td>16.418</td>
       <td>0.766</td>
       <td>—</td>
       <td>3.78</td>
+      <td>False</td>
     </tr>
     <tr>
       <td>mixed_no_failure</td>
       <td>fixed_long</td>
       <td>2</td>
       <td>0.000</td>
+      <td>0.000</td>
       <td>4.674</td>
       <td>16.418</td>
       <td>0.910</td>
       <td>—</td>
       <td>3.00</td>
+      <td>False</td>
     </tr>
     <tr>
       <td>mixed_no_failure</td>
       <td>fixed_overall_mean</td>
       <td>2</td>
       <td>0.286</td>
+      <td>0.285</td>
       <td>17.416</td>
       <td>32.233</td>
       <td>0.560</td>
       <td>—</td>
       <td>3.40</td>
+      <td>False</td>
     </tr>
     <tr>
       <td>mixed_no_failure</td>
       <td>fixed_per_class</td>
       <td>2</td>
+      <td>0.000</td>
       <td>0.000</td>
       <td>4.674</td>
       <td>16.418</td>
       <td>0.910</td>
       <td>—</td>
       <td>3.00</td>
+      <td>False</td>
     </tr>
     <tr>
       <td>mixed_no_failure</td>
       <td>fixed_short</td>
       <td>2</td>
       <td>0.378</td>
+      <td>0.365</td>
       <td>28.203</td>
       <td>52.059</td>
       <td>0.461</td>
       <td>—</td>
       <td>3.62</td>
+      <td>False</td>
+    </tr>
+    <tr>
+      <td>mixed_no_failure</td>
+      <td>pretuned_per_class</td>
+      <td>2</td>
+      <td>0.037</td>
+      <td>0.035</td>
+      <td>5.968</td>
+      <td>17.803</td>
+      <td>0.764</td>
+      <td>—</td>
+      <td>3.04</td>
+      <td>False</td>
     </tr>
     <tr>
       <td>mixed_with_failures</td>
       <td>adaptive_p90</td>
       <td>2</td>
       <td>0.064</td>
+      <td>0.047</td>
       <td>6.263</td>
       <td>16.994</td>
       <td>0.790</td>
       <td>10.953</td>
       <td>3.10</td>
+      <td>False</td>
+    </tr>
+    <tr>
+      <td>mixed_with_failures</td>
+      <td>adaptive_p90_relative</td>
+      <td>2</td>
+      <td>0.064</td>
+      <td>0.047</td>
+      <td>6.263</td>
+      <td>16.994</td>
+      <td>0.790</td>
+      <td>10.953</td>
+      <td>3.10</td>
+      <td>False</td>
     </tr>
     <tr>
       <td>mixed_with_failures</td>
       <td>fixed_heartbeat</td>
       <td>2</td>
       <td>0.010</td>
+      <td>0.012</td>
       <td>4.824</td>
       <td>16.418</td>
       <td>0.766</td>
       <td>3.536</td>
       <td>3.81</td>
+      <td>True</td>
     </tr>
     <tr>
       <td>mixed_with_failures</td>
       <td>fixed_long</td>
       <td>2</td>
+      <td>0.000</td>
       <td>0.000</td>
       <td>5.583</td>
       <td>20.950</td>
       <td>0.910</td>
       <td>28.693</td>
       <td>3.03</td>
+      <td>False</td>
     </tr>
     <tr>
       <td>mixed_with_failures</td>
       <td>fixed_overall_mean</td>
       <td>2</td>
       <td>0.309</td>
+      <td>0.308</td>
       <td>18.914</td>
       <td>32.645</td>
       <td>0.546</td>
       <td>4.555</td>
       <td>3.49</td>
+      <td>False</td>
     </tr>
     <tr>
       <td>mixed_with_failures</td>
       <td>fixed_per_class</td>
       <td>2</td>
+      <td>0.000</td>
       <td>0.000</td>
       <td>4.962</td>
       <td>16.418</td>
       <td>0.910</td>
       <td>7.289</td>
       <td>3.03</td>
+      <td>True</td>
     </tr>
     <tr>
       <td>mixed_with_failures</td>
       <td>fixed_short</td>
       <td>2</td>
       <td>0.393</td>
+      <td>0.382</td>
       <td>28.693</td>
       <td>47.596</td>
       <td>0.463</td>
       <td>4.940</td>
       <td>3.68</td>
+      <td>False</td>
+    </tr>
+    <tr>
+      <td>mixed_with_failures</td>
+      <td>pretuned_per_class</td>
+      <td>2</td>
+      <td>0.037</td>
+      <td>0.035</td>
+      <td>5.821</td>
+      <td>17.316</td>
+      <td>0.770</td>
+      <td>7.171</td>
+      <td>3.07</td>
+      <td>False</td>
     </tr>
     <tr>
       <td>sudden_shift</td>
       <td>adaptive_p90</td>
       <td>2</td>
       <td>0.098</td>
+      <td>0.120</td>
       <td>13.495</td>
       <td>33.290</td>
       <td>0.531</td>
       <td>—</td>
       <td>3.11</td>
+      <td>False</td>
+    </tr>
+    <tr>
+      <td>sudden_shift</td>
+      <td>adaptive_p90_relative</td>
+      <td>2</td>
+      <td>0.098</td>
+      <td>0.120</td>
+      <td>13.678</td>
+      <td>34.060</td>
+      <td>0.521</td>
+      <td>—</td>
+      <td>3.11</td>
+      <td>False</td>
     </tr>
     <tr>
       <td>sudden_shift</td>
       <td>fixed_heartbeat</td>
       <td>2</td>
       <td>0.010</td>
+      <td>0.012</td>
       <td>11.331</td>
       <td>26.376</td>
       <td>0.609</td>
       <td>—</td>
       <td>4.62</td>
+      <td>False</td>
     </tr>
     <tr>
       <td>sudden_shift</td>
       <td>fixed_long</td>
       <td>2</td>
       <td>0.000</td>
+      <td>0.000</td>
       <td>11.331</td>
       <td>26.376</td>
       <td>0.668</td>
       <td>—</td>
       <td>3.00</td>
+      <td>False</td>
     </tr>
     <tr>
       <td>sudden_shift</td>
       <td>fixed_overall_mean</td>
       <td>2</td>
       <td>0.210</td>
+      <td>0.241</td>
       <td>15.351</td>
       <td>41.325</td>
       <td>0.469</td>
       <td>—</td>
       <td>3.27</td>
+      <td>False</td>
     </tr>
     <tr>
       <td>sudden_shift</td>
       <td>fixed_per_class</td>
       <td>2</td>
       <td>0.048</td>
+      <td>0.059</td>
       <td>11.681</td>
       <td>28.118</td>
       <td>0.552</td>
       <td>—</td>
       <td>3.05</td>
+      <td>False</td>
     </tr>
     <tr>
       <td>sudden_shift</td>
       <td>fixed_short</td>
       <td>2</td>
       <td>0.541</td>
+      <td>0.568</td>
       <td>35.761</td>
       <td>96.014</td>
       <td>0.303</td>
       <td>—</td>
       <td>4.18</td>
+      <td>False</td>
+    </tr>
+    <tr>
+      <td>sudden_shift</td>
+      <td>pretuned_per_class</td>
+      <td>2</td>
+      <td>0.142</td>
+      <td>0.171</td>
+      <td>13.817</td>
+      <td>36.011</td>
+      <td>0.513</td>
+      <td>—</td>
+      <td>3.17</td>
+      <td>False</td>
+    </tr>
+  </tbody>
+</table></div>
+<div class="card"><h2>Paired comparisons</h2><p class="note">Mean difference = reference − comparator over seeds (negative = reference lower). Wilcoxon signed-rank p-values; <code>p_holm</code> is Holm-adjusted across every test in <a href="paired_comparisons.csv">paired_comparisons.csv</a>.</p><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th>scenario</th>
+      <th>reference</th>
+      <th>comparator</th>
+      <th>metric</th>
+      <th>n_pairs</th>
+      <th>mean_difference</th>
+      <th>ci_low</th>
+      <th>ci_high</th>
+      <th>p_value</th>
+      <th>p_holm</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>mixed_no_failure</td>
+      <td>adaptive_p90</td>
+      <td>adaptive_p90_relative</td>
+      <td>duplicate_processing_rate</td>
+      <td>2</td>
+      <td>0.0000</td>
+      <td>0.0000</td>
+      <td>0.0000</td>
+      <td>—</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>mixed_no_failure</td>
+      <td>adaptive_p90</td>
+      <td>adaptive_p90_relative</td>
+      <td>mean_failure_recovery_time_s</td>
+      <td>0</td>
+      <td>—</td>
+      <td>—</td>
+      <td>—</td>
+      <td>—</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>mixed_no_failure</td>
+      <td>adaptive_p90</td>
+      <td>adaptive_p90_relative</td>
+      <td>steady_duplicate_processing_rate</td>
+      <td>2</td>
+      <td>0.0000</td>
+      <td>0.0000</td>
+      <td>0.0000</td>
+      <td>—</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>mixed_no_failure</td>
+      <td>adaptive_p90</td>
+      <td>fixed_heartbeat</td>
+      <td>duplicate_processing_rate</td>
+      <td>2</td>
+      <td>0.0643</td>
+      <td>-0.0603</td>
+      <td>0.1888</td>
+      <td>0.5000</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <td>mixed_no_failure</td>
+      <td>adaptive_p90</td>
+      <td>fixed_heartbeat</td>
+      <td>mean_failure_recovery_time_s</td>
+      <td>0</td>
+      <td>—</td>
+      <td>—</td>
+      <td>—</td>
+      <td>—</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>mixed_no_failure</td>
+      <td>adaptive_p90</td>
+      <td>fixed_heartbeat</td>
+      <td>steady_duplicate_processing_rate</td>
+      <td>2</td>
+      <td>0.0465</td>
+      <td>0.0323</td>
+      <td>0.0607</td>
+      <td>0.5000</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <td>mixed_no_failure</td>
+      <td>adaptive_p90</td>
+      <td>fixed_long</td>
+      <td>duplicate_processing_rate</td>
+      <td>2</td>
+      <td>0.0741</td>
+      <td>0.0741</td>
+      <td>0.0741</td>
+      <td>0.3458</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <td>mixed_no_failure</td>
+      <td>adaptive_p90</td>
+      <td>fixed_long</td>
+      <td>mean_failure_recovery_time_s</td>
+      <td>0</td>
+      <td>—</td>
+      <td>—</td>
+      <td>—</td>
+      <td>—</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>mixed_no_failure</td>
+      <td>adaptive_p90</td>
+      <td>fixed_long</td>
+      <td>steady_duplicate_processing_rate</td>
+      <td>2</td>
+      <td>0.0587</td>
+      <td>-0.0820</td>
+      <td>0.1994</td>
+      <td>0.5000</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <td>mixed_no_failure</td>
+      <td>adaptive_p90</td>
+      <td>fixed_overall_mean</td>
+      <td>duplicate_processing_rate</td>
+      <td>2</td>
+      <td>-0.2115</td>
+      <td>-0.3412</td>
+      <td>-0.0818</td>
+      <td>0.5000</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <td>mixed_no_failure</td>
+      <td>adaptive_p90</td>
+      <td>fixed_overall_mean</td>
+      <td>mean_failure_recovery_time_s</td>
+      <td>0</td>
+      <td>—</td>
+      <td>—</td>
+      <td>—</td>
+      <td>—</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>mixed_no_failure</td>
+      <td>adaptive_p90</td>
+      <td>fixed_overall_mean</td>
+      <td>steady_duplicate_processing_rate</td>
+      <td>2</td>
+      <td>-0.2261</td>
+      <td>-0.4099</td>
+      <td>-0.0423</td>
+      <td>0.5000</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <td>mixed_no_failure</td>
+      <td>adaptive_p90</td>
+      <td>fixed_per_class</td>
+      <td>duplicate_processing_rate</td>
+      <td>2</td>
+      <td>0.0741</td>
+      <td>0.0741</td>
+      <td>0.0741</td>
+      <td>0.3458</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <td>mixed_no_failure</td>
+      <td>adaptive_p90</td>
+      <td>fixed_per_class</td>
+      <td>mean_failure_recovery_time_s</td>
+      <td>0</td>
+      <td>—</td>
+      <td>—</td>
+      <td>—</td>
+      <td>—</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>mixed_no_failure</td>
+      <td>adaptive_p90</td>
+      <td>fixed_per_class</td>
+      <td>steady_duplicate_processing_rate</td>
+      <td>2</td>
+      <td>0.0587</td>
+      <td>-0.0820</td>
+      <td>0.1994</td>
+      <td>0.5000</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <td>mixed_no_failure</td>
+      <td>adaptive_p90</td>
+      <td>fixed_short</td>
+      <td>duplicate_processing_rate</td>
+      <td>2</td>
+      <td>-0.3040</td>
+      <td>-0.9869</td>
+      <td>0.3789</td>
+      <td>0.5000</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <td>mixed_no_failure</td>
+      <td>adaptive_p90</td>
+      <td>fixed_short</td>
+      <td>mean_failure_recovery_time_s</td>
+      <td>0</td>
+      <td>—</td>
+      <td>—</td>
+      <td>—</td>
+      <td>—</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>mixed_no_failure</td>
+      <td>adaptive_p90</td>
+      <td>fixed_short</td>
+      <td>steady_duplicate_processing_rate</td>
+      <td>2</td>
+      <td>-0.3064</td>
+      <td>-1.1741</td>
+      <td>0.5613</td>
+      <td>0.5000</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <td>mixed_no_failure</td>
+      <td>adaptive_p90</td>
+      <td>pretuned_per_class</td>
+      <td>duplicate_processing_rate</td>
+      <td>2</td>
+      <td>0.0370</td>
+      <td>-0.4336</td>
+      <td>0.5076</td>
+      <td>1.0000</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <td>mixed_no_failure</td>
+      <td>adaptive_p90</td>
+      <td>pretuned_per_class</td>
+      <td>mean_failure_recovery_time_s</td>
+      <td>0</td>
+      <td>—</td>
+      <td>—</td>
+      <td>—</td>
+      <td>—</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>mixed_no_failure</td>
+      <td>adaptive_p90</td>
+      <td>pretuned_per_class</td>
+      <td>steady_duplicate_processing_rate</td>
+      <td>2</td>
+      <td>0.0238</td>
+      <td>-0.2787</td>
+      <td>0.3263</td>
+      <td>1.0000</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <td>mixed_with_failures</td>
+      <td>adaptive_p90</td>
+      <td>adaptive_p90_relative</td>
+      <td>duplicate_processing_rate</td>
+      <td>2</td>
+      <td>0.0000</td>
+      <td>0.0000</td>
+      <td>0.0000</td>
+      <td>—</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>mixed_with_failures</td>
+      <td>adaptive_p90</td>
+      <td>adaptive_p90_relative</td>
+      <td>mean_failure_recovery_time_s</td>
+      <td>1</td>
+      <td>0.0000</td>
+      <td>—</td>
+      <td>—</td>
+      <td>—</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>mixed_with_failures</td>
+      <td>adaptive_p90</td>
+      <td>adaptive_p90_relative</td>
+      <td>steady_duplicate_processing_rate</td>
+      <td>2</td>
+      <td>0.0000</td>
+      <td>0.0000</td>
+      <td>0.0000</td>
+      <td>—</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>mixed_with_failures</td>
+      <td>adaptive_p90</td>
+      <td>fixed_heartbeat</td>
+      <td>duplicate_processing_rate</td>
+      <td>2</td>
+      <td>0.0540</td>
+      <td>0.0483</td>
+      <td>0.0597</td>
+      <td>0.5000</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <td>mixed_with_failures</td>
+      <td>adaptive_p90</td>
+      <td>fixed_heartbeat</td>
+      <td>mean_failure_recovery_time_s</td>
+      <td>1</td>
+      <td>7.4167</td>
+      <td>—</td>
+      <td>—</td>
+      <td>1.0000</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <td>mixed_with_failures</td>
+      <td>adaptive_p90</td>
+      <td>fixed_heartbeat</td>
+      <td>steady_duplicate_processing_rate</td>
+      <td>2</td>
+      <td>0.0349</td>
+      <td>-0.0984</td>
+      <td>0.1682</td>
+      <td>0.5000</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <td>mixed_with_failures</td>
+      <td>adaptive_p90</td>
+      <td>fixed_long</td>
+      <td>duplicate_processing_rate</td>
+      <td>2</td>
+      <td>0.0638</td>
+      <td>-0.0664</td>
+      <td>0.1941</td>
+      <td>0.5000</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <td>mixed_with_failures</td>
+      <td>adaptive_p90</td>
+      <td>fixed_long</td>
+      <td>mean_failure_recovery_time_s</td>
+      <td>1</td>
+      <td>-17.7404</td>
+      <td>—</td>
+      <td>—</td>
+      <td>1.0000</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <td>mixed_with_failures</td>
+      <td>adaptive_p90</td>
+      <td>fixed_long</td>
+      <td>steady_duplicate_processing_rate</td>
+      <td>2</td>
+      <td>0.0471</td>
+      <td>-0.2412</td>
+      <td>0.3354</td>
+      <td>0.5000</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <td>mixed_with_failures</td>
+      <td>adaptive_p90</td>
+      <td>fixed_overall_mean</td>
+      <td>duplicate_processing_rate</td>
+      <td>2</td>
+      <td>-0.2450</td>
+      <td>-0.3116</td>
+      <td>-0.1784</td>
+      <td>0.5000</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <td>mixed_with_failures</td>
+      <td>adaptive_p90</td>
+      <td>fixed_overall_mean</td>
+      <td>mean_failure_recovery_time_s</td>
+      <td>1</td>
+      <td>2.8339</td>
+      <td>—</td>
+      <td>—</td>
+      <td>1.0000</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <td>mixed_with_failures</td>
+      <td>adaptive_p90</td>
+      <td>fixed_overall_mean</td>
+      <td>steady_duplicate_processing_rate</td>
+      <td>2</td>
+      <td>-0.2614</td>
+      <td>-0.4276</td>
+      <td>-0.0952</td>
+      <td>0.5000</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <td>mixed_with_failures</td>
+      <td>adaptive_p90</td>
+      <td>fixed_per_class</td>
+      <td>duplicate_processing_rate</td>
+      <td>2</td>
+      <td>0.0638</td>
+      <td>-0.0664</td>
+      <td>0.1941</td>
+      <td>0.5000</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <td>mixed_with_failures</td>
+      <td>adaptive_p90</td>
+      <td>fixed_per_class</td>
+      <td>mean_failure_recovery_time_s</td>
+      <td>1</td>
+      <td>3.6635</td>
+      <td>—</td>
+      <td>—</td>
+      <td>1.0000</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <td>mixed_with_failures</td>
+      <td>adaptive_p90</td>
+      <td>fixed_per_class</td>
+      <td>steady_duplicate_processing_rate</td>
+      <td>2</td>
+      <td>0.0471</td>
+      <td>-0.2412</td>
+      <td>0.3354</td>
+      <td>0.5000</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <td>mixed_with_failures</td>
+      <td>adaptive_p90</td>
+      <td>fixed_short</td>
+      <td>duplicate_processing_rate</td>
+      <td>2</td>
+      <td>-0.3288</td>
+      <td>-0.4417</td>
+      <td>-0.2159</td>
+      <td>0.5000</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <td>mixed_with_failures</td>
+      <td>adaptive_p90</td>
+      <td>fixed_short</td>
+      <td>mean_failure_recovery_time_s</td>
+      <td>1</td>
+      <td>2.4095</td>
+      <td>—</td>
+      <td>—</td>
+      <td>1.0000</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <td>mixed_with_failures</td>
+      <td>adaptive_p90</td>
+      <td>fixed_short</td>
+      <td>steady_duplicate_processing_rate</td>
+      <td>2</td>
+      <td>-0.3352</td>
+      <td>-0.5299</td>
+      <td>-0.1405</td>
+      <td>0.5000</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <td>mixed_with_failures</td>
+      <td>adaptive_p90</td>
+      <td>pretuned_per_class</td>
+      <td>duplicate_processing_rate</td>
+      <td>2</td>
+      <td>0.0268</td>
+      <td>-0.3136</td>
+      <td>0.3671</td>
+      <td>1.0000</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <td>mixed_with_failures</td>
+      <td>adaptive_p90</td>
+      <td>pretuned_per_class</td>
+      <td>mean_failure_recovery_time_s</td>
+      <td>1</td>
+      <td>3.7813</td>
+      <td>—</td>
+      <td>—</td>
+      <td>1.0000</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <td>mixed_with_failures</td>
+      <td>adaptive_p90</td>
+      <td>pretuned_per_class</td>
+      <td>steady_duplicate_processing_rate</td>
+      <td>2</td>
+      <td>0.0122</td>
+      <td>-0.1428</td>
+      <td>0.1671</td>
+      <td>1.0000</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <td>sudden_shift</td>
+      <td>adaptive_p90</td>
+      <td>adaptive_p90_relative</td>
+      <td>duplicate_processing_rate</td>
+      <td>2</td>
+      <td>0.0000</td>
+      <td>0.0000</td>
+      <td>0.0000</td>
+      <td>—</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>sudden_shift</td>
+      <td>adaptive_p90</td>
+      <td>adaptive_p90_relative</td>
+      <td>mean_failure_recovery_time_s</td>
+      <td>0</td>
+      <td>—</td>
+      <td>—</td>
+      <td>—</td>
+      <td>—</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>sudden_shift</td>
+      <td>adaptive_p90</td>
+      <td>adaptive_p90_relative</td>
+      <td>steady_duplicate_processing_rate</td>
+      <td>2</td>
+      <td>0.0000</td>
+      <td>0.0000</td>
+      <td>0.0000</td>
+      <td>—</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>sudden_shift</td>
+      <td>adaptive_p90</td>
+      <td>fixed_heartbeat</td>
+      <td>duplicate_processing_rate</td>
+      <td>2</td>
+      <td>0.0886</td>
+      <td>-0.0964</td>
+      <td>0.2737</td>
+      <td>0.5000</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <td>sudden_shift</td>
+      <td>adaptive_p90</td>
+      <td>fixed_heartbeat</td>
+      <td>mean_failure_recovery_time_s</td>
+      <td>0</td>
+      <td>—</td>
+      <td>—</td>
+      <td>—</td>
+      <td>—</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>sudden_shift</td>
+      <td>adaptive_p90</td>
+      <td>fixed_heartbeat</td>
+      <td>steady_duplicate_processing_rate</td>
+      <td>2</td>
+      <td>0.1077</td>
+      <td>-0.1060</td>
+      <td>0.3214</td>
+      <td>0.5000</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <td>sudden_shift</td>
+      <td>adaptive_p90</td>
+      <td>fixed_long</td>
+      <td>duplicate_processing_rate</td>
+      <td>2</td>
+      <td>0.0984</td>
+      <td>-0.2112</td>
+      <td>0.4080</td>
+      <td>0.5000</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <td>sudden_shift</td>
+      <td>adaptive_p90</td>
+      <td>fixed_long</td>
+      <td>mean_failure_recovery_time_s</td>
+      <td>0</td>
+      <td>—</td>
+      <td>—</td>
+      <td>—</td>
+      <td>—</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>sudden_shift</td>
+      <td>adaptive_p90</td>
+      <td>fixed_long</td>
+      <td>steady_duplicate_processing_rate</td>
+      <td>2</td>
+      <td>0.1199</td>
+      <td>-0.2487</td>
+      <td>0.4886</td>
+      <td>0.5000</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <td>sudden_shift</td>
+      <td>adaptive_p90</td>
+      <td>fixed_overall_mean</td>
+      <td>duplicate_processing_rate</td>
+      <td>2</td>
+      <td>-0.1118</td>
+      <td>-0.3553</td>
+      <td>0.1318</td>
+      <td>0.5000</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <td>sudden_shift</td>
+      <td>adaptive_p90</td>
+      <td>fixed_overall_mean</td>
+      <td>mean_failure_recovery_time_s</td>
+      <td>0</td>
+      <td>—</td>
+      <td>—</td>
+      <td>—</td>
+      <td>—</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>sudden_shift</td>
+      <td>adaptive_p90</td>
+      <td>fixed_overall_mean</td>
+      <td>steady_duplicate_processing_rate</td>
+      <td>2</td>
+      <td>-0.1210</td>
+      <td>-0.4803</td>
+      <td>0.2382</td>
+      <td>0.5000</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <td>sudden_shift</td>
+      <td>adaptive_p90</td>
+      <td>fixed_per_class</td>
+      <td>duplicate_processing_rate</td>
+      <td>2</td>
+      <td>0.0509</td>
+      <td>-0.3740</td>
+      <td>0.4758</td>
+      <td>0.5000</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <td>sudden_shift</td>
+      <td>adaptive_p90</td>
+      <td>fixed_per_class</td>
+      <td>mean_failure_recovery_time_s</td>
+      <td>0</td>
+      <td>—</td>
+      <td>—</td>
+      <td>—</td>
+      <td>—</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>sudden_shift</td>
+      <td>adaptive_p90</td>
+      <td>fixed_per_class</td>
+      <td>steady_duplicate_processing_rate</td>
+      <td>2</td>
+      <td>0.0612</td>
+      <td>-0.4481</td>
+      <td>0.5706</td>
+      <td>0.5000</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <td>sudden_shift</td>
+      <td>adaptive_p90</td>
+      <td>fixed_short</td>
+      <td>duplicate_processing_rate</td>
+      <td>2</td>
+      <td>-0.4428</td>
+      <td>-0.7524</td>
+      <td>-0.1332</td>
+      <td>0.5000</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <td>sudden_shift</td>
+      <td>adaptive_p90</td>
+      <td>fixed_short</td>
+      <td>mean_failure_recovery_time_s</td>
+      <td>0</td>
+      <td>—</td>
+      <td>—</td>
+      <td>—</td>
+      <td>—</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>sudden_shift</td>
+      <td>adaptive_p90</td>
+      <td>fixed_short</td>
+      <td>steady_duplicate_processing_rate</td>
+      <td>2</td>
+      <td>-0.4476</td>
+      <td>-0.7866</td>
+      <td>-0.1087</td>
+      <td>0.5000</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <td>sudden_shift</td>
+      <td>adaptive_p90</td>
+      <td>pretuned_per_class</td>
+      <td>duplicate_processing_rate</td>
+      <td>2</td>
+      <td>-0.0438</td>
+      <td>-0.3863</td>
+      <td>0.2987</td>
+      <td>0.5000</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <td>sudden_shift</td>
+      <td>adaptive_p90</td>
+      <td>pretuned_per_class</td>
+      <td>mean_failure_recovery_time_s</td>
+      <td>0</td>
+      <td>—</td>
+      <td>—</td>
+      <td>—</td>
+      <td>—</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>sudden_shift</td>
+      <td>adaptive_p90</td>
+      <td>pretuned_per_class</td>
+      <td>steady_duplicate_processing_rate</td>
+      <td>2</td>
+      <td>-0.0510</td>
+      <td>-0.4426</td>
+      <td>0.3405</td>
+      <td>0.5000</td>
+      <td>1.0</td>
     </tr>
   </tbody>
 </table></div>
@@ -241,6 +1131,8 @@ a { color: #1769aa; } .note { color: #475569; }
 <div class="figure"><h3>07 Prediction Actual</h3><a href="plots/07_prediction_actual.png"><img src="plots/07_prediction_actual.png" alt="07 prediction actual"></a></div>
 <div class="figure"><h3>08 Shift Behaviour</h3><a href="plots/08_shift_behaviour.png"><img src="plots/08_shift_behaviour.png" alt="08 shift behaviour"></a></div>
 <div class="figure"><h3>09 Api Overhead</h3><a href="plots/09_api_overhead.png"><img src="plots/09_api_overhead.png" alt="09 api overhead"></a></div>
-<div class="figure"><h3>10 Tradeoff</h3><a href="plots/10_tradeoff.png"><img src="plots/10_tradeoff.png" alt="10 tradeoff"></a></div></div>
-<div class="card"><h2>Files</h2><ul><li><a href="run_metrics.csv">Run metrics CSV</a></li><li><a href="aggregate_metrics.csv">Aggregate metrics CSV</a></li><li><a href="attempt_metrics.csv">Attempt metrics CSV</a></li></ul></div>
+<div class="figure"><h3>10 Tradeoff</h3><a href="plots/10_tradeoff.png"><img src="plots/10_tradeoff.png" alt="10 tradeoff"></a></div>
+<div class="figure"><h3>11 Pareto Front</h3><a href="plots/11_pareto_front.png"><img src="plots/11_pareto_front.png" alt="11 pareto front"></a></div>
+<div class="figure"><h3>12 Cold Start Vs Steady</h3><a href="plots/12_cold_start_vs_steady.png"><img src="plots/12_cold_start_vs_steady.png" alt="12 cold start vs steady"></a></div></div>
+<div class="card"><h2>Files</h2><ul><li><a href="run_metrics.csv">Run metrics CSV</a></li><li><a href="aggregate_metrics.csv">Aggregate metrics CSV</a></li><li><a href="paired_comparisons.csv">Paired comparisons CSV</a></li><li><a href="attempt_metrics.csv">Attempt metrics CSV</a></li></ul></div>
 </body></html>

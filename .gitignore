@@ -8,4 +8,4 @@ venv/
 .aws/
 .ipynb_checkpoints/
 results/full/
-tempCodeRunnerFile.c tempCodeRunnerFile.exe
+tempCodeRunnerFile.*

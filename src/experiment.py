@@ -18,7 +18,8 @@ from .policies import (
     MeanFixedPolicy,
 )
 from .simulator import SQSSimulator
-from .workload import WorkloadSpec, generate_workload, oracle_class_timeouts
+from .stats import paired_comparisons, pareto_optimal
+from .workload import WorkloadSpec, generate_workload, oracle_class_timeouts, pretuned_class_timeouts
 
 
 DEFAULT_SCENARIOS = {
@@ -31,21 +32,51 @@ DEFAULT_SCENARIOS = {
 }
 
 
-def build_policies(messages, safety_margin: float = 2.0, history_window: int = 40):
+# Extra adaptive configurations run alongside `adaptive_p90`. Keys are policy
+# names; values override AdaptivePercentilePolicy arguments. Scenarios may add
+# their own via an "adaptive_variants" entry (used for sensitivity sweeps).
+DEFAULT_ADAPTIVE_VARIANTS = {
+    "adaptive_p90_relative": {"safety_margin": 0.0, "relative_margin": 0.25},
+}
+
+
+def build_policies(
+    messages,
+    safety_margin: float = 2.0,
+    history_window: int = 40,
+    spec: WorkloadSpec | None = None,
+    seed: int | None = None,
+    calibration_fraction: float = 0.2,
+    adaptive_variants: dict[str, dict[str, Any]] | None = None,
+):
     durations = np.asarray([m.processing_duration for m in messages])
-    return [
+    adaptive_defaults = dict(
+        safety_margin=safety_margin,
+        history_window=history_window,
+        default_timeout=12.0,
+        min_history=5,
+    )
+    policies = [
         FixedPolicy(3.0, "fixed_short"),
         FixedPolicy(30.0, "fixed_long"),
         MeanFixedPolicy(float(durations.mean()), safety_margin=0.0),
         ClassBasedPolicy(oracle_class_timeouts(messages, safety_margin), 15.0),
-        AdaptivePercentilePolicy(
-            safety_margin=safety_margin,
-            history_window=history_window,
-            default_timeout=12.0,
-            min_history=5,
-        ),
-        FixedHeartbeatPolicy(5.0, heartbeat_interval=3.5, max_extensions=4, max_total_visibility=40.0),
     ]
+    if spec is not None and seed is not None:
+        policies.append(
+            ClassBasedPolicy(
+                pretuned_class_timeouts(spec, seed, safety_margin, calibration_fraction),
+                15.0,
+                name="pretuned_per_class",
+            )
+        )
+    policies.append(AdaptivePercentilePolicy(**adaptive_defaults))
+    for name, overrides in (adaptive_variants or {}).items():
+        params = {**adaptive_defaults, **overrides}
+        params["history_window"] = max(int(params["history_window"]), int(params["min_history"]))
+        policies.append(AdaptivePercentilePolicy(name=name, **params))
+    policies.append(FixedHeartbeatPolicy(5.0, heartbeat_interval=3.5, max_extensions=4, max_total_visibility=40.0))
+    return policies
 
 
 def run_experiments(config: dict[str, Any], output_dir: str | Path) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
@@ -66,10 +97,23 @@ def run_experiments(config: dict[str, Any], output_dir: str | Path) -> tuple[pd.
             messages, shift_time = generate_workload(spec, seed, experiment_id)
             margins = scenario.get("safety_margins", [config.get("safety_margin", 2.0)])
             windows = scenario.get("history_windows", [config.get("history_window", 40)])
+            variants = {
+                **config.get("adaptive_variants", DEFAULT_ADAPTIVE_VARIANTS),
+                **scenario.get("adaptive_variants", {}),
+            }
+            selected = scenario.get("policies", config.get("policies"))
             for margin in margins:
                 for window in windows:
-                    for policy in build_policies(messages, float(margin), int(window)):
-                        selected = config.get("policies")
+                    policies = build_policies(
+                        messages,
+                        float(margin),
+                        int(window),
+                        spec=spec,
+                        seed=seed,
+                        calibration_fraction=float(config.get("calibration_fraction", 0.2)),
+                        adaptive_variants=variants,
+                    )
+                    for policy in policies:
                         if selected and policy.name not in selected:
                             continue
                         sim = SQSSimulator(
@@ -86,7 +130,7 @@ def run_experiments(config: dict[str, Any], output_dir: str | Path) -> tuple[pd.
                         attempts["safety_margin"] = float(margin)
                         attempts["history_window"] = int(window)
                         all_attempts.append(attempts)
-                        row = summarize_run(result, shift_time)
+                        row = summarize_run(result, shift_time, float(config.get("warmup_fraction", 0.2)))
                         row.update(
                             scenario=scenario_name,
                             policy_name=policy.name,
@@ -98,10 +142,26 @@ def run_experiments(config: dict[str, Any], output_dir: str | Path) -> tuple[pd.
     attempt_df = pd.concat(all_attempts, ignore_index=True)
     run_df = pd.DataFrame(run_rows)
     aggregate_df = aggregate_runs(run_df)
+    aggregate_df["pareto_optimal_dup_vs_recovery"] = _pareto_flags(aggregate_df)
+    paired_df = paired_comparisons(run_df, reference=config.get("paired_reference", "adaptive_p90"))
     attempt_df.to_csv(output_dir / "attempt_metrics.csv", index=False)
     run_df.to_csv(output_dir / "run_metrics.csv", index=False)
     aggregate_df.to_csv(output_dir / "aggregate_metrics.csv", index=False)
+    paired_df.to_csv(output_dir / "paired_comparisons.csv", index=False)
     return attempt_df, run_df, aggregate_df
+
+
+PARETO_X = "mean_failure_recovery_time_s_mean"
+PARETO_Y = "duplicate_processing_rate_mean"
+
+
+def _pareto_flags(aggregates: pd.DataFrame) -> pd.Series:
+    """Pareto optimality on (recovery, duplicates) within each scenario/sweep cell."""
+    keys = [k for k in ["scenario", "safety_margin", "history_window"] if k in aggregates.columns]
+    flags = pd.Series(False, index=aggregates.index)
+    for _, frame in aggregates.groupby(keys, dropna=False):
+        flags.loc[frame.index] = pareto_optimal(frame, PARETO_X, PARETO_Y)
+    return flags
 
 
 def generate_plots(attempts: pd.DataFrame, runs: pd.DataFrame, output_dir: str | Path) -> None:
@@ -150,6 +210,68 @@ def generate_plots(attempts: pd.DataFrame, runs: pd.DataFrame, output_dir: str |
     plt.figure(figsize=(8, 6)); sns.scatterplot(data=runs, x="mean_failure_recovery_time_s", y="duplicate_processing_rate", hue="policy_name", style="scenario", s=90)
     plt.title("Duplicate processing versus failure recovery"); plt.xlabel("Mean recovery time (simulated seconds)"); plt.ylabel("Duplicate-processing rate (fraction)"); plt.tight_layout(); plt.savefig(output_dir / "10_tradeoff.png", dpi=160); plt.close()
 
+    _plot_pareto_front(runs, output_dir / "11_pareto_front.png")
+    _plot_steady_state(runs, output_dir / "12_cold_start_vs_steady.png")
+
+
+def _plot_pareto_front(runs: pd.DataFrame, path: Path) -> None:
+    """Per-scenario policy means with ±1 SD bars; the non-dominated set is joined."""
+    import matplotlib.pyplot as plt
+
+    x, y = "mean_failure_recovery_time_s", "duplicate_processing_rate"
+    base = runs
+    for column in ("safety_margin", "history_window"):  # keep the default setting, not sweep cells
+        if column in base:
+            base = base[base[column] == base[column].mode().iat[0]]
+    stats = base.groupby(["scenario", "policy_name"])[[x, y]].agg(["mean", "std"])
+    stats.columns = [f"{metric}_{stat}" for metric, stat in stats.columns]
+    stats = stats.reset_index().dropna(subset=[f"{x}_mean", f"{y}_mean"])
+    scenarios = sorted(stats["scenario"].unique())
+    if not scenarios:
+        return
+    policies = sorted(stats["policy_name"].unique())
+    palette = plt.get_cmap("tab20").colors
+    colours = {policy: palette[i % len(palette)] for i, policy in enumerate(policies)}
+    cols = min(3, len(scenarios))
+    rows = -(-len(scenarios) // cols)
+    fig, axes = plt.subplots(rows, cols, figsize=(5.2 * cols, 4.4 * rows), squeeze=False)
+    for ax, scenario in zip(axes.flat, scenarios):
+        frame = stats[stats["scenario"] == scenario].copy()
+        frame["optimal"] = pareto_optimal(frame, f"{x}_mean", f"{y}_mean")
+        for _, row in frame.iterrows():
+            ax.errorbar(
+                row[f"{x}_mean"], row[f"{y}_mean"], xerr=row[f"{x}_std"], yerr=row[f"{y}_std"],
+                fmt="o" if row["optimal"] else "x", color=colours[row["policy_name"]],
+                markersize=8, capsize=3, alpha=0.9 if row["optimal"] else 0.55,
+            )
+        front = frame[frame["optimal"]].sort_values(f"{x}_mean")
+        ax.plot(front[f"{x}_mean"], front[f"{y}_mean"], "k--", linewidth=1)
+        ax.set_title(scenario); ax.set_xlabel("Mean recovery (s)"); ax.set_ylabel("Duplicate-processing rate")
+    for ax in list(axes.flat)[len(scenarios):]:
+        ax.set_visible(False)
+    handles = [plt.Line2D([], [], marker="o", linestyle="", color=colours[p], label=p) for p in policies]
+    fig.legend(handles=handles, loc="lower center", ncol=min(len(policies), 4), frameon=False)
+    fig.suptitle("Duplicate/recovery Pareto front (circles = non-dominated, dashed = front)")
+    fig.tight_layout(rect=(0, 0.12, 1, 0.96)); fig.savefig(path, dpi=160); plt.close(fig)
+
+
+def _plot_steady_state(runs: pd.DataFrame, path: Path) -> None:
+    """Duplicate rate over all jobs versus after warm-up, exposing cold-start cost."""
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+
+    if "steady_duplicate_processing_rate" not in runs:
+        return
+    long = runs.melt(
+        id_vars=["policy_name"],
+        value_vars=["duplicate_processing_rate", "steady_duplicate_processing_rate"],
+        var_name="window", value_name="rate",
+    )
+    long["window"] = long["window"].map({"duplicate_processing_rate": "All jobs", "steady_duplicate_processing_rate": "After warm-up"})
+    plt.figure(figsize=(11, 5)); sns.barplot(data=long, x="policy_name", y="rate", hue="window", errorbar="sd")
+    plt.title("Duplicate processing: all jobs versus steady state"); plt.xlabel("Visibility-timeout policy"); plt.ylabel("Duplicate-processing rate (fraction)")
+    plt.xticks(rotation=30, ha="right"); plt.tight_layout(); plt.savefig(path, dpi=160); plt.close()
+
 
 def write_html_report(
     attempts: pd.DataFrame,
@@ -163,9 +285,11 @@ def write_html_report(
     plot_dir = output_dir / "plots"
     selected = [
         "scenario", "policy_name", "repetitions",
-        "duplicate_processing_rate_mean", "mean_end_to_end_latency_s_mean",
+        "duplicate_processing_rate_mean", "steady_duplicate_processing_rate_mean",
+        "mean_end_to_end_latency_s_mean",
         "p95_end_to_end_latency_s_mean", "throughput_jobs_per_s_mean",
         "mean_failure_recovery_time_s_mean", "queue_api_operations_per_completed_message_mean",
+        "pareto_optimal_dup_vs_recovery",
     ]
     selected = [column for column in selected if column in aggregates.columns]
     summary = aggregates[selected].copy()
@@ -179,10 +303,25 @@ def write_html_report(
         "throughput_jobs_per_s_mean": "Throughput (jobs/s)",
         "mean_failure_recovery_time_s_mean": "Mean recovery (s)",
         "queue_api_operations_per_completed_message_mean": "API operations / job",
+        "steady_duplicate_processing_rate_mean": "Duplicate rate after warm-up",
+        "pareto_optimal_dup_vs_recovery": "Pareto-optimal",
     }
     summary = summary.rename(columns=rename)
     numeric = summary.select_dtypes(include="number").columns
     summary[numeric] = summary[numeric].round(3)
+    paired_html = "<p>No paired comparisons were produced.</p>"
+    paired_path = output_dir / "paired_comparisons.csv"
+    if paired_path.exists() and paired_path.stat().st_size > 1:
+        paired = pd.read_csv(paired_path)
+        if not paired.empty:
+            headline = paired[paired["metric"].isin(["duplicate_processing_rate", "steady_duplicate_processing_rate", "mean_failure_recovery_time_s"])]
+            headline = headline[["scenario", "reference", "comparator", "metric", "n_pairs", "mean_difference", "ci_low", "ci_high", "p_value", "p_holm"]].round(4)
+            paired_html = (
+                '<p class="note">Mean difference = reference − comparator over seeds (negative = reference lower). '
+                "Wilcoxon signed-rank p-values; <code>p_holm</code> is Holm-adjusted across every test in "
+                '<a href="paired_comparisons.csv">paired_comparisons.csv</a>.</p>'
+                + headline.to_html(index=False, na_rep="—")
+            )
     plot_links = "\n".join(
         f'<div class="figure"><h3>{index:02d} {path.stem[3:].replace("_", " ").title()}</h3><a href="plots/{path.name}"><img src="plots/{path.name}" alt="{path.stem.replace("_", " ")}"></a></div>'
         for index, path in enumerate(sorted(plot_dir.glob("*.png")), start=1)
@@ -207,8 +346,9 @@ a {{ color: #1769aa; }} .note {{ color: #475569; }}
 <p><b>Runs:</b> {len(runs):,} &nbsp; <b>Attempt records:</b> {len(attempts):,} &nbsp; <b>Scenarios:</b> {runs['scenario'].nunique()} &nbsp; <b>Policies:</b> {runs['policy_name'].nunique()}</p>
 </div>
 <div class="card"><h2>Policy comparison</h2>{summary.to_html(index=False, na_rep="—", classes="summary")}</div>
+<div class="card"><h2>Paired comparisons</h2>{paired_html}</div>
 <div class="card"><h2>Figures</h2>{plot_links or '<p>Run with --plots to generate figures.</p>'}</div>
-<div class="card"><h2>Files</h2><ul><li><a href="run_metrics.csv">Run metrics CSV</a></li><li><a href="aggregate_metrics.csv">Aggregate metrics CSV</a></li><li><a href="attempt_metrics.csv">Attempt metrics CSV</a></li></ul></div>
+<div class="card"><h2>Files</h2><ul><li><a href="run_metrics.csv">Run metrics CSV</a></li><li><a href="aggregate_metrics.csv">Aggregate metrics CSV</a></li><li><a href="paired_comparisons.csv">Paired comparisons CSV</a></li><li><a href="attempt_metrics.csv">Attempt metrics CSV</a></li></ul></div>
 </body></html>"""
     report_path = output_dir / "report.html"
     report_path.write_text(report, encoding="utf-8")

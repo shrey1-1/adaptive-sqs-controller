@@ -6,7 +6,7 @@ Duplicate processing is defined as temporal overlap at attempt start. Another de
 
 ## Internal validity
 
-Event ordering is deterministic. Failures use common random numbers keyed by `(seed, job_id, receive_count)`, so the k-th delivery of a job fails identically under every policy; policies still differ in how many deliveries they cause, so total failure counts can differ. Because the key omits the scenario, scenarios run with the same seed share failure draws for the same job IDs. The class baseline is an oracle fitted to the full generated dataset. This favors the baseline and should be disclosed, not hidden.
+Event ordering is deterministic. Failures use common random numbers keyed by `(seed, job_id, receive_count)`, so the k-th delivery of a job fails identically under every policy; policies still differ in how many deliveries they cause, so total failure counts can differ. Because the key omits the scenario, scenarios run with the same seed share failure draws for the same job IDs. `fixed_per_class` is an oracle fitted to the full generated dataset; `pretuned_per_class` is the realistic comparator, fitted to an independent pilot calibration window.
 
 ## External validity
 
@@ -14,7 +14,7 @@ No network latency, autoscaling delay, heterogeneous workers, correlated failure
 
 ## Statistical conclusion validity
 
-Five seeds offer a student-scale estimate, not high-powered inference. Aggregates report Student-t intervals (`*_ci95_*`) and percentile-bootstrap intervals (`*_boot_ci95_*`); the t interval assumes approximate normality of seed means, and the bootstrap interval is crude with very few seeds. Inspect per-seed values and distributions. Prediction-error and adaptation-time metrics are reported only for policies that estimate duration.
+Twenty seeds (`full.json`) support paired tests at moderate power; smoke runs with two seeds are demonstrations only. Aggregates report Student-t intervals (`*_ci95_*`) and percentile-bootstrap intervals (`*_boot_ci95_*`); the t interval assumes approximate normality of seed means, and the bootstrap interval is crude with very few seeds. Inspect per-seed values and distributions. Prediction-error and adaptation-time metrics are reported only for policies that estimate duration.
 
 ## Adaptive-policy failure modes
 
