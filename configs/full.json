@@ -174,6 +174,147 @@
         "adaptive_heartbeat_fixed_budget",
         "fixed_heartbeat"
       ]
+    },
+    "hang_sweep_none": {
+      "workload": "mixed",
+      "failure": "low",
+      "hang": "none",
+      "policies": [
+        "adaptive_heartbeat",
+        "adaptive_heartbeat_fixed_budget",
+        "fixed_heartbeat",
+        "adaptive_p90",
+        "fixed_long"
+      ]
+    },
+    "hang_sweep_low": {
+      "workload": "mixed",
+      "failure": "low",
+      "hang": "low",
+      "policies": [
+        "adaptive_heartbeat",
+        "adaptive_heartbeat_fixed_budget",
+        "fixed_heartbeat",
+        "adaptive_p90",
+        "fixed_long"
+      ]
+    },
+    "hang_sweep_high": {
+      "workload": "mixed",
+      "failure": "low",
+      "hang": "high",
+      "policies": [
+        "adaptive_heartbeat",
+        "adaptive_heartbeat_fixed_budget",
+        "fixed_heartbeat",
+        "adaptive_p90",
+        "fixed_long"
+      ]
+    },
+    "mixed_hangs_probe_10s": {
+      "workload": "mixed",
+      "failure": "low",
+      "hang": "medium",
+      "hang_detection": 10.0,
+      "policies": [
+        "adaptive_heartbeat",
+        "adaptive_heartbeat_fixed_budget",
+        "fixed_heartbeat",
+        "adaptive_p90",
+        "fixed_long"
+      ]
+    },
+    "cost_ratio_sweep": {
+      "workload": "heavy_tailed",
+      "failure": "medium",
+      "adaptive_variants": {
+        "adaptive_cost_r0.25": {
+          "cost_ratio": 0.25
+        },
+        "adaptive_cost_r4": {
+          "cost_ratio": 4.0
+        }
+      },
+      "policies": [
+        "adaptive_p90",
+        "adaptive_cost_r0.25",
+        "adaptive_cost_aware",
+        "adaptive_cost_r4"
+      ]
     }
-  }
+  },
+  "primary_hypotheses": [
+    {
+      "id": "H1",
+      "declared": "post hoc: re-tests a Phase 2/3 finding on the same seeds",
+      "scenario": "sudden_shift",
+      "reference": "adaptive_p90",
+      "comparator": "pretuned_per_class",
+      "metric": "duplicate_processing_rate",
+      "expected": "lower"
+    },
+    {
+      "id": "H2",
+      "declared": "post hoc: re-tests a Phase 2/3 finding on the same seeds",
+      "scenario": "mixed_with_hangs",
+      "reference": "adaptive_heartbeat",
+      "comparator": "fixed_heartbeat",
+      "metric": "mean_failure_recovery_time_s",
+      "expected": "lower"
+    },
+    {
+      "id": "H3",
+      "declared": "post hoc: re-tests a Phase 2/3 finding on the same seeds",
+      "scenario": "mixed_with_hangs",
+      "reference": "adaptive_heartbeat",
+      "comparator": "fixed_heartbeat",
+      "metric": "duplicate_processing_rate",
+      "expected": "lower"
+    },
+    {
+      "id": "H4",
+      "declared": "post hoc: re-tests a Phase 2/3 finding on the same seeds",
+      "scenario": "mixed_with_failures",
+      "reference": "adaptive_heartbeat",
+      "comparator": "fixed_heartbeat",
+      "metric": "duplicate_processing_rate",
+      "expected": "lower"
+    },
+    {
+      "id": "H5",
+      "declared": "before evaluation-seed results; rule chosen on tuning seeds 1001-1010",
+      "scenario": "mixed_no_failure",
+      "reference": "adaptive_p90",
+      "comparator": "adaptive_p90_fixed_fallback",
+      "metric": "duplicate_processing_rate",
+      "expected": "lower"
+    },
+    {
+      "id": "H6",
+      "declared": "before results (Phase 4)",
+      "scenario": "heavy_tailed_no_failure",
+      "reference": "adaptive_cost_aware",
+      "comparator": "adaptive_p90",
+      "metric": "duplicate_processing_rate",
+      "expected": "lower"
+    },
+    {
+      "id": "H7",
+      "declared": "before results (Phase 4)",
+      "scenario": "sudden_shift",
+      "reference": "adaptive_cost_aware",
+      "comparator": "adaptive_p90",
+      "metric": "tradeoff_cost_s_per_job",
+      "expected": "lower"
+    },
+    {
+      "id": "H8",
+      "declared": "before results (Phase 4)",
+      "scenario": "mixed_with_failures",
+      "reference": "adaptive_conformal",
+      "comparator": "adaptive_p90",
+      "metric": "duplicate_processing_rate",
+      "expected": "lower"
+    }
+  ]
 }
