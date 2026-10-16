@@ -158,7 +158,7 @@ def replication_policies(time_scale: float) -> dict[str, VisibilityPolicy]:
         "adaptive_p90": AdaptivePercentilePolicy(safety_margin=2.0 * s, history_window=40, default_timeout=12.0 * s, min_history=5),
         "adaptive_heartbeat_dynamic": AdaptiveHeartbeatPolicy(
             safety_margin=2.0 * s, history_window=40, min_history=5, lease_cap=5.0 * s, default_lease=5.0 * s,
-            max_total_visibility=40.0 * s, dynamic_budget=True,
+            max_total_visibility=40.0 * s, dynamic_budget=True, name="adaptive_heartbeat_dynamic",
         ),
     }
 
@@ -383,7 +383,8 @@ def run_replication(client, queue_url: str, config: ReplicationConfig, policy_na
     table = pd.DataFrame(rows)
     table.to_csv(output_dir / "replication_summary.csv", index=False)
     pd.concat(attempts, ignore_index=True).to_csv(output_dir / "replication_attempts.csv", index=False)
-    (output_dir / "replication_config.json").write_text(json.dumps({**config.__dict__, "policies": policy_names}, indent=2), encoding="utf-8")
+    mode = "fake" if isinstance(client, FakeSQSClient) else "aws"
+    (output_dir / "replication_config.json").write_text(json.dumps({**config.__dict__, "policies": policy_names, "mode": mode}, indent=2), encoding="utf-8")
     return table
 
 
@@ -397,6 +398,7 @@ def main() -> None:
     parser.add_argument("--workers", type=int, default=4)
     parser.add_argument("--time-scale", type=float, default=1.0)
     parser.add_argument("--output", default="results/aws_replication")
+    parser.add_argument("--no-open", action="store_true", help="do not open the HTML report in a browser")
     args = parser.parse_args()
     config = ReplicationConfig(n_jobs=args.jobs, workers=args.workers, time_scale=args.time_scale, integer_timeouts=not args.fake)
     if args.fake:
@@ -408,8 +410,19 @@ def main() -> None:
 
         client, queue_url = boto3.client("sqs", region_name=args.region), args.queue_url
     table = run_replication(client, queue_url, config, args.policies, args.output)
-    pd.set_option("display.width", 200)
-    print(table.round(3).to_string(index=False))
+    from .replication_report import write_replication_report
+
+    report = write_replication_report(args.output)
+    short = table[["policy_name", "real_duplicate_processing_rate", "simulated_duplicate_processing_rate",
+                   "real_mean_failure_recovery_time_s", "simulated_mean_failure_recovery_time_s"]].copy()
+    short.columns = ["policy", "dup real", "dup sim", "recovery real (s)", "recovery sim (s)"]
+    print(short.round(3).to_string(index=False))
+    print()
+    print(f"Full report with figures: {report.resolve()}")
+    if not args.no_open:
+        import webbrowser
+
+        webbrowser.open(report.resolve().as_uri())
 
 
 if __name__ == "__main__":

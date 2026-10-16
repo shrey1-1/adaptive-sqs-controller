@@ -73,5 +73,26 @@ class EndToEndTests(unittest.TestCase):
         self.assertEqual(client.get_queue_attributes(QueueUrl="q", AttributeNames=[])["Attributes"]["ApproximateNumberOfMessages"], "0")
 
 
+
+class ReportTests(unittest.TestCase):
+    def test_report_page_with_figures(self):
+        from src.replication_report import write_replication_report
+
+        config = ReplicationConfig(n_jobs=8, workers=2, time_scale=0.05, integer_timeouts=False,
+                                   poll_wait_seconds=0, max_seconds_per_policy=30)
+        with tempfile.TemporaryDirectory() as tmp:
+            run_replication(FakeSQSClient(), "q", config, ["fixed_short", "adaptive_heartbeat_dynamic"], tmp)
+            report = write_replication_report(tmp)
+            page = report.read_text(encoding="utf-8")
+            import pandas as pd
+            attempts = pd.read_csv(f"{tmp}/replication_attempts.csv")
+            from pathlib import Path
+            figures = sorted(p.name for p in Path(tmp, "plots").glob("*.png"))
+        self.assertIn("Dry run against an in-memory fake queue", page)
+        self.assertIn("07_attempt_timeline.png", page)
+        self.assertEqual(len(figures), 7)
+        self.assertEqual(set(attempts.policy_name), {"fixed_short", "adaptive_heartbeat_dynamic"})
+
+
 if __name__ == "__main__":
     unittest.main()
