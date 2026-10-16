@@ -27,6 +27,10 @@ class VisibilityPolicy(ABC):
     def observe(self, job_type: str, duration: float, now: float) -> None:
         pass
 
+    def observe_attempt_end(self, job_type: str, failed: bool, now: float) -> None:
+        """Called when an attempt completes (failed=False) or its worker crashes or
+        is restarted after a hang (failed=True); lets a policy learn the failure rate."""
+
     def extension_timeout(self, job_type: str, now: float) -> float:
         return self.decide(job_type, now).timeout
 

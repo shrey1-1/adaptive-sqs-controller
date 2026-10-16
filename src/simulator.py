@@ -30,12 +30,16 @@ class SQSSimulator:
         failure_model: FailureModel,
         workers: int = 8,
         seed: int = 0,
+        hang_detection_timeout: float | None = None,
     ) -> None:
         self.messages = messages
         self.policy = policy
         self.failure_model = failure_model
         self.worker_ids = [f"worker-{i:02d}" for i in range(workers)]
         self.seed = int(seed)
+        # Optional liveness probe: a hung worker is killed this long after it
+        # stops progressing, independently of its lease. None = no probe.
+        self.hang_detection_timeout = hang_detection_timeout
         self.ledger = InMemoryIdempotencyLedger()
         self.events: list[tuple[float, int, str, Any]] = []
         self.counter = itertools.count()
@@ -89,6 +93,7 @@ class SQSSimulator:
                 duplicate_processing=bool(active),
                 heartbeat_interval=self.policy.heartbeat_interval_for(message.job_type, self.now),
                 visibility_budget=self.policy.max_total_visibility_for(message.job_type, self.now),
+                used_fallback=decision.used_fallback,
             )
             self.attempts[attempt_id] = attempt
             active.add(attempt_id)
@@ -133,6 +138,7 @@ class SQSSimulator:
             "receive_count": attempt.receive_count,
             "worker_failure": attempt.failed,
             "worker_hang": attempt.hung,
+            "used_fallback_timeout": attempt.used_fallback,
             "duplicate_delivery": attempt.duplicate_delivery,
             "duplicate_processing": attempt.duplicate_processing,
             "successful_completion": success,
@@ -150,6 +156,7 @@ class SQSSimulator:
         self.active_by_job.get(attempt.message.job_id, set()).discard(attempt.attempt_id)
         self.last_failure[attempt.message.job_id] = self.now
         self.last_failure_kind[attempt.message.job_id] = "crash"
+        self.policy.observe_attempt_end(attempt.message.job_type, True, self.now)
         self._record(attempt, False, False)
 
     def _on_hang(self, attempt: DeliveryAttempt) -> None:
@@ -161,13 +168,22 @@ class SQSSimulator:
         self.worker_hangs += 1
         self.last_failure[attempt.message.job_id] = self.now
         self.last_failure_kind[attempt.message.job_id] = "hang"
+        if self.hang_detection_timeout is not None:
+            self._push(self.now + self.hang_detection_timeout, "hang_detected", attempt.attempt_id)
 
     def _release_hung(self, attempt: DeliveryAttempt) -> None:
         """The hung worker is restarted once its lease finally expires."""
         attempt.failed = True
         self.busy.pop(attempt.worker_id, None)
         self.active_by_job.get(attempt.message.job_id, set()).discard(attempt.attempt_id)
+        self.policy.observe_attempt_end(attempt.message.job_type, True, self.now)
         self._record(attempt, False, False)
+
+    def _on_hang_detected(self, attempt: DeliveryAttempt) -> None:
+        """Liveness probe kills the hung worker: heartbeats stop, and the message
+        becomes visible when its current lease runs out."""
+        if attempt.hung and not attempt.failed:
+            self._release_hung(attempt)
 
     def _on_complete(self, attempt: DeliveryAttempt) -> None:
         if attempt.failed or attempt.completed:
@@ -177,6 +193,7 @@ class SQSSimulator:
         self.busy.pop(attempt.worker_id, None)
         self.active_by_job.get(attempt.message.job_id, set()).discard(attempt.attempt_id)
         committed = self.ledger.commit_once(attempt.message.job_id)
+        self.policy.observe_attempt_end(attempt.message.job_type, False, self.now)
         if attempt.message.job_id not in self.deleted:
             self.deleted.add(attempt.message.job_id)
             self.api_operations["delete"] += 1
@@ -233,6 +250,8 @@ class SQSSimulator:
                     self._on_failure(attempt)
                 elif event == "hang":
                     self._on_hang(attempt)
+                elif event == "hang_detected":
+                    self._on_hang_detected(attempt)
                 elif event == "complete":
                     self._on_complete(attempt)
                 elif event == "visibility_expire":

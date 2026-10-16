@@ -19,7 +19,7 @@ from .policies import (
     MeanFixedPolicy,
 )
 from .simulator import SQSSimulator
-from .stats import holm_adjust, paired_comparisons, pareto_optimal
+from .stats import holm_adjust, paired_comparisons, pareto_optimal, primary_tests
 from .workload import WorkloadSpec, generate_workload, oracle_class_timeouts, pretuned_class_timeouts
 
 
@@ -40,6 +40,12 @@ DEFAULT_SCENARIOS = {
 # sensitivity sweeps).
 DEFAULT_ADAPTIVE_VARIANTS = {
     "adaptive_p90_relative": {"safety_margin": 0.0, "relative_margin": 0.25},
+    # Ablation of the partial-history cold start (the pre-fix behaviour).
+    "adaptive_p90_fixed_fallback": {"cold_start": "default"},
+    # Phase 4: each differs from adaptive_p90 in one setting, the last in two.
+    "adaptive_cost_aware": {"cost_ratio": 1.0},
+    "adaptive_conformal": {"quantile_method": "conformal"},
+    "adaptive_cost_conformal": {"cost_ratio": 1.0, "quantile_method": "conformal"},
 }
 
 
@@ -138,6 +144,7 @@ def run_experiments(config: dict[str, Any], output_dir: str | Path) -> tuple[pd.
                             FailureModel.from_level(scenario["failure"], scenario.get("hang", "none")),
                             workers=int(config.get("workers", 8)),
                             seed=seed + 1000,
+                            hang_detection_timeout=scenario.get("hang_detection"),
                         )
                         result = sim.run()
                         attempts = pd.DataFrame(result["attempt_rows"])
@@ -163,11 +170,14 @@ def run_experiments(config: dict[str, Any], output_dir: str | Path) -> tuple[pd.
     references = [references] if isinstance(references, str) else list(references)
     paired_df = pd.concat([paired_comparisons(run_df, reference=r) for r in references], ignore_index=True)
     if not paired_df.empty:
-        paired_df["p_holm"] = holm_adjust(paired_df["p_value"])  # family = every test in the file
+        paired_df["p_holm"] = holm_adjust(paired_df["p_value"])  # exploratory family = every test in the file
+        paired_df["family"] = "exploratory"
+    primary_df = primary_tests(run_df, config.get("primary_hypotheses", []))
     attempt_df.to_csv(output_dir / "attempt_metrics.csv", index=False)
     run_df.to_csv(output_dir / "run_metrics.csv", index=False)
     aggregate_df.to_csv(output_dir / "aggregate_metrics.csv", index=False)
     paired_df.to_csv(output_dir / "paired_comparisons.csv", index=False)
+    primary_df.to_csv(output_dir / "primary_hypotheses.csv", index=False)
     return attempt_df, run_df, aggregate_df
 
 
@@ -293,6 +303,14 @@ def _plot_steady_state(runs: pd.DataFrame, path: Path) -> None:
     plt.xticks(rotation=30, ha="right"); plt.tight_layout(); plt.savefig(path, dpi=160); plt.close()
 
 
+def _read_optional_csv(path: Path) -> pd.DataFrame:
+    """A results CSV that may be missing or empty (e.g. no declared hypotheses)."""
+    try:
+        return pd.read_csv(path)
+    except (FileNotFoundError, pd.errors.EmptyDataError):
+        return pd.DataFrame()
+
+
 def write_html_report(
     attempts: pd.DataFrame,
     runs: pd.DataFrame,
@@ -329,19 +347,25 @@ def write_html_report(
     summary = summary.rename(columns=rename)
     numeric = summary.select_dtypes(include="number").columns
     summary[numeric] = summary[numeric].round(3)
+    primary_html = "<p>No primary hypotheses were declared in the configuration.</p>"
+    primary = _read_optional_csv(output_dir / "primary_hypotheses.csv")
+    if not primary.empty:
+        primary_html = (
+            '<p class="note">Declared family; Holm correction applies within it only. '
+            "Mean difference = reference − comparator over seeds.</p>"
+            + primary.round(4).to_html(index=False, na_rep="—")
+        )
     paired_html = "<p>No paired comparisons were produced.</p>"
-    paired_path = output_dir / "paired_comparisons.csv"
-    if paired_path.exists() and paired_path.stat().st_size > 1:
-        paired = pd.read_csv(paired_path)
-        if not paired.empty:
-            headline = paired[paired["metric"].isin(["duplicate_processing_rate", "steady_duplicate_processing_rate", "mean_failure_recovery_time_s"])]
-            headline = headline[["scenario", "reference", "comparator", "metric", "n_pairs", "mean_difference", "ci_low", "ci_high", "p_value", "p_holm"]].round(4)
-            paired_html = (
-                '<p class="note">Mean difference = reference − comparator over seeds (negative = reference lower). '
-                "Wilcoxon signed-rank p-values; <code>p_holm</code> is Holm-adjusted across every test in "
-                '<a href="paired_comparisons.csv">paired_comparisons.csv</a>.</p>'
-                + headline.to_html(index=False, na_rep="—")
-            )
+    paired = _read_optional_csv(output_dir / "paired_comparisons.csv")
+    if not paired.empty:
+        headline = paired[paired["metric"].isin(["duplicate_processing_rate", "steady_duplicate_processing_rate", "mean_failure_recovery_time_s"])]
+        headline = headline[["scenario", "reference", "comparator", "metric", "n_pairs", "mean_difference", "ci_low", "ci_high", "p_value", "p_holm"]].round(4)
+        paired_html = (
+            '<p class="note">Mean difference = reference − comparator over seeds (negative = reference lower). '
+            "Wilcoxon signed-rank p-values; <code>p_holm</code> is Holm-adjusted across every exploratory test in "
+            '<a href="paired_comparisons.csv">paired_comparisons.csv</a>.</p>'
+            + headline.to_html(index=False, na_rep="—")
+        )
     plot_links = "\n".join(
         f'<div class="figure"><h3>{index:02d} {path.stem[3:].replace("_", " ").title()}</h3><a href="plots/{path.name}"><img src="plots/{path.name}" alt="{path.stem.replace("_", " ")}"></a></div>'
         for index, path in enumerate(sorted(plot_dir.glob("*.png")), start=1)
@@ -366,9 +390,10 @@ a {{ color: #1769aa; }} .note {{ color: #475569; }}
 <p><b>Runs:</b> {len(runs):,} &nbsp; <b>Attempt records:</b> {len(attempts):,} &nbsp; <b>Scenarios:</b> {runs['scenario'].nunique()} &nbsp; <b>Policies:</b> {runs['policy_name'].nunique()}</p>
 </div>
 <div class="card"><h2>Policy comparison</h2>{summary.to_html(index=False, na_rep="—", classes="summary")}</div>
-<div class="card"><h2>Paired comparisons</h2>{paired_html}</div>
+<div class="card"><h2>Primary hypotheses</h2>{primary_html}</div>
+<div class="card"><h2>Exploratory paired comparisons</h2>{paired_html}</div>
 <div class="card"><h2>Figures</h2>{plot_links or '<p>Run with --plots to generate figures.</p>'}</div>
-<div class="card"><h2>Files</h2><ul><li><a href="run_metrics.csv">Run metrics CSV</a></li><li><a href="aggregate_metrics.csv">Aggregate metrics CSV</a></li><li><a href="paired_comparisons.csv">Paired comparisons CSV</a></li><li><a href="attempt_metrics.csv">Attempt metrics CSV</a></li></ul></div>
+<div class="card"><h2>Files</h2><ul><li><a href="run_metrics.csv">Run metrics CSV</a></li><li><a href="aggregate_metrics.csv">Aggregate metrics CSV</a></li><li><a href="primary_hypotheses.csv">Primary hypotheses CSV</a></li><li><a href="paired_comparisons.csv">Paired comparisons CSV</a></li><li><a href="attempt_metrics.csv">Attempt metrics CSV</a></li></ul></div>
 </body></html>"""
     report_path = output_dir / "report.html"
     report_path.write_text(report, encoding="utf-8")
@@ -401,6 +426,11 @@ def main() -> None:
         print(f"Completed {len(runs):,} runs and recorded {len(attempts):,} attempts.")
         print(f"Readable report: {report_path}")
         print(headline.to_string(index=False))
+        primary = _read_optional_csv(Path(args.output) / "primary_hypotheses.csv")
+        if not primary.empty:
+            print()
+            print("Primary hypotheses (Holm within family):")
+            print(primary[["hypothesis", "scenario", "reference", "comparator", "metric", "mean_difference", "p_holm", "supported"]].round(4).to_string(index=False))
 
 
 if __name__ == "__main__":

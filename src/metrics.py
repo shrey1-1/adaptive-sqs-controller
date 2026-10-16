@@ -36,6 +36,19 @@ def summarize_run(
     predicts = bool(sim_result.get("policy_predicts_duration", True))
     if not predicts:
         prediction_error = prediction_error.iloc[0:0]
+    # Coverage: share of jobs whose first attempt finished within the predicted
+    # quantile itself (before any margin), excluding cold-start fallbacks. A
+    # conformal q-quantile should cover at least q of exchangeable durations.
+    # First attempts only: a job that overran is redelivered and would otherwise
+    # be counted as uncovered again on every retry, biasing coverage low.
+    coverage = math.nan
+    if predicts and len(successful_attempts):
+        learned = successful_attempts[successful_attempts["receive_count"] == 1]
+        if "used_fallback_timeout" in learned:
+            learned = learned[~learned["used_fallback_timeout"].astype(bool)]
+        if len(learned):
+            coverage = float((learned["actual_processing_duration"] <= learned["predicted_processing_duration"]).mean())
+    duplicate_seconds = float(df.loc[df["duplicate_processing"], "actual_processing_duration"].sum()) if len(df) else 0.0
     adaptation_time = math.nan
     if predicts and shift_time is not None and not completed.empty:
         post = completed[completed["receive_time"] >= shift_time].sort_values("receive_time")
@@ -63,6 +76,10 @@ def summarize_run(
         "successful_completion_rate": completed_jobs / max(sent_jobs, 1),
         "queue_api_operations_per_completed_message": api_total / max(completed_jobs, 1),
         "adaptation_time_s": adaptation_time,
+        "prediction_coverage": coverage,
+        # The quantity the cost-aware policy minimises with cost ratio 1: seconds
+        # of duplicated work plus seconds of failure-recovery delay, per job.
+        "tradeoff_cost_s_per_job": (duplicate_seconds + float(recoveries.sum())) / max(completed_jobs, 1),
         "worker_failures": float(len(failures)),
         "worker_hangs": float(sim_result.get("worker_hangs", 0)),
         "mean_hang_recovery_time_s": float(hang_recoveries.mean()) if hang_recoveries.size else math.nan,

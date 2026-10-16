@@ -168,3 +168,61 @@ def pareto_optimal(points: pd.DataFrame, x: str, y: str) -> pd.Series:
         )
         optimal.append(not dominated)
     return pd.Series(optimal, index=points.index)
+
+
+def primary_tests(runs: pd.DataFrame, hypotheses: Iterable[dict], confidence: float = 0.95) -> pd.DataFrame:
+    """Test a small, declared family of hypotheses with Holm correction within it.
+
+    Each hypothesis names a scenario, a reference and a comparator policy, a
+    metric, and the expected direction of reference minus comparator
+    ("lower" or "higher"). Only the default setting of any sweep column is
+    used. `supported` requires the mean difference in the expected direction
+    and a Holm-adjusted p below 1 - confidence. Everything outside this family
+    is exploratory and is corrected separately in `paired_comparisons`.
+    """
+    alpha = 1.0 - confidence
+    rows: list[dict] = []
+    base = runs
+    for column in ("safety_margin", "history_window"):
+        if column in base:
+            base = base[base[column] == base[column].mode().iat[0]]
+    for h in hypotheses:
+        frame = base[base["scenario"] == h["scenario"]]
+        ref = frame[frame["policy_name"] == h["reference"]].set_index("seed")
+        other = frame[frame["policy_name"] == h["comparator"]].set_index("seed")
+        seeds = ref.index.intersection(other.index)
+        metric = h["metric"]
+        if metric in frame and len(seeds):
+            diff = (ref.loc[seeds, metric] - other.loc[seeds, metric]).dropna().to_numpy(dtype=float)
+        else:
+            diff = np.asarray([], dtype=float)
+        n = len(diff)
+        mean = float(diff.mean()) if n else math.nan
+        half = t_critical(confidence, n - 1) * float(diff.std(ddof=1)) / math.sqrt(n) if n > 1 else math.nan
+        _, p_value, _ = wilcoxon_signed_rank(diff)
+        expected = h.get("expected", "lower")
+        in_direction = int((diff < 0).sum()) if expected == "lower" else int((diff > 0).sum())
+        rows.append(
+            {
+                "hypothesis": h["id"],
+                "declared": h.get("declared", ""),
+                "scenario": h["scenario"],
+                "reference": h["reference"],
+                "comparator": h["comparator"],
+                "metric": metric,
+                "expected": expected,
+                "n_pairs": n,
+                "mean_difference": mean,
+                "ci_low": mean - half,
+                "ci_high": mean + half,
+                "seeds_in_expected_direction": in_direction,
+                "p_value": p_value,
+            }
+        )
+    table = pd.DataFrame(rows)
+    if table.empty:
+        return table
+    table["p_holm"] = holm_adjust(table["p_value"])
+    direction_ok = np.where(table["expected"] == "lower", table["mean_difference"] < 0, table["mean_difference"] > 0)
+    table["supported"] = direction_ok & (table["p_holm"] < alpha)
+    return table

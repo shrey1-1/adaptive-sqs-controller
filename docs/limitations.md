@@ -16,6 +16,10 @@ No network latency, autoscaling delay, heterogeneous workers, correlated failure
 
 Twenty seeds (`full.json`) support paired tests at moderate power; smoke runs with two seeds are demonstrations only. Aggregates report Student-t intervals (`*_ci95_*`) and percentile-bootstrap intervals (`*_boot_ci95_*`); the t interval assumes approximate normality of seed means, and the bootstrap interval is crude with very few seeds. Inspect per-seed values and distributions. Prediction-error and adaptation-time metrics are reported only for policies that estimate duration.
 
+## Phase 4 assumptions
+
+The cost-aware policy learns the failure rate from worker lifecycle events (crash, hang restart, completion), which assumes the controller can observe worker health; SQS alone only exposes redeliveries, which do not distinguish a crash from a slow job. Its derivation charges only the overrun of a slow job, while `tradeoff_cost_s_per_job` charges the full duplicate attempt, so the cost ratio must be calibrated rather than read off directly. Conformal coverage holds only while recent durations are exchangeable; it fails after shifts and is slightly reduced by completion-order bias. With a 40-sample window, conformal levels above 40/41 cannot be met, so `adaptive_cost_conformal` falls back to the cold-start rule whenever failures are rare.
+
 ## Adaptive-policy failure modes
 
 Cold-start fallback can be poor; rare classes learn slowly; small windows are noisy; large windows react slowly; the observed P90 can lag sudden changes; capped timeouts can under-cover extreme tails; large margins delay failure recovery; and a stable, well-tuned static class policy can be simpler and better.

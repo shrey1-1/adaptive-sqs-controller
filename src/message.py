@@ -36,4 +36,5 @@ class DeliveryAttempt:
     heartbeat_interval: Optional[float] = None
     visibility_budget: float = 0.0
     hung: bool = False
+    used_fallback: bool = False
 

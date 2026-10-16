@@ -31,14 +31,34 @@ Columns prefixed `steady_` repeat key metrics for jobs sent after the first `war
 ## Statistical analysis
 
 - `aggregate_metrics.csv` gives mean, SD, Student-t 95% CI, and percentile-bootstrap 95% CI per scenario and policy, plus `pareto_optimal_dup_vs_recovery` for policies not dominated on (mean recovery, duplicate rate) within the scenario.
-- `paired_comparisons.csv` compares every policy against the reference (`paired_reference`, default `adaptive_p90`) using per-seed differences: mean difference (reference − comparator) with a t interval, an exact Wilcoxon signed-rank p-value (normal approximation when ties occur), and a Holm-adjusted p-value across every test in the file.
+- `paired_comparisons.csv` compares every policy against each reference (`paired_reference`, default `adaptive_p90` and `adaptive_heartbeat`) using per-seed differences: mean difference (reference − comparator) with a t interval, an exact Wilcoxon signed-rank p-value (normal approximation when ties occur), and a Holm-adjusted p-value across every exploratory test in the file.
 - With twenty seeds the smallest attainable two-sided exact Wilcoxon p-value is 2/2²⁰, so Holm-adjusted significance is attainable; with two seeds it is not, which is why smoke runs are demonstrations only.
+
+## Primary hypotheses
+
+`configs/full.json` declares eight hypotheses (H1–H8), each a single paired test of one metric between two policies in one scenario, with an expected direction. `primary_tests` applies Holm correction within this family only and marks a hypothesis `supported` when the mean difference has the expected sign and the adjusted p-value is below 0.05. All other comparisons are exploratory and Holm-corrected separately across `paired_comparisons.csv`.
+
+H1–H4 re-test findings from Phases 2 and 3 on the same seeds; they are labelled post hoc and are confirmatory only in the sense of surviving the stricter family correction. H5–H8 were committed to the repository (`bfab621`) before any evaluation-seed run of the code that tests them.
+
+## Tuning seeds
+
+Design choices tuned on data use seeds 1001–1010, which never overlap the evaluation seeds (11–220). The partial-history cold-start factor (1.5) was chosen this way.
+
+## Phase 4 metrics
+
+- `prediction_coverage`: share of jobs whose first successful attempt finished within the predicted quantile (before the margin), excluding cold-start fallbacks. First attempts only, because a job that overran is redelivered and would otherwise be counted as uncovered once per retry.
+- `tradeoff_cost_s_per_job`: seconds of duplicate-processing work plus seconds of failure-recovery delay, per completed job. It weights the two equally (cost ratio 1).
+
+## Hang sensitivity
+
+Hang rates of 0%, 2%, 8% and 20% per attempt are run on the mixed workload, plus an 8% scenario with a liveness probe that kills a hung worker 10 s after it stops progressing.
 
 ## Analysis rules
 
-1. Compare adaptive P90 first with `pretuned_per_class`, then with the oracle and global policies.
-2. Report effect sizes in original units and uncertainty, not only rankings; use paired tests, not overlapping CIs.
-3. Report both full and steady-state values, and attribute differences to cold start where the gap shows it.
-4. Explain stationary cases where the static class policy wins.
-5. Separate simulator evidence from real AWS evidence.
-6. Do not generalize beyond modeled assumptions.
+1. Read `primary_hypotheses.csv` first; treat everything else as exploratory.
+2. Compare adaptive P90 first with `pretuned_per_class`, then with the oracle and global policies.
+3. Report effect sizes in original units and uncertainty, not only rankings; use paired tests, not overlapping CIs.
+4. Report both full and steady-state values, and attribute differences to cold start where the gap shows it.
+5. Explain stationary cases where the static class policy wins.
+6. Separate simulator evidence from real AWS evidence.
+7. Do not generalize beyond modeled assumptions.
