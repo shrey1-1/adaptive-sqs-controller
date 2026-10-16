@@ -61,6 +61,9 @@ Seeded workload -> simulated visible queue -> workers -> attempts/results
 - `adaptive_conformal` (Phase 4): the ⌈(n+1)·0.9⌉-th order statistic, which covers the next duration with probability ≥ 0.9 when recent durations are exchangeable.
 - `adaptive_cost_conformal` (Phase 4): both.
 - `adaptive_p90_fixed_fallback`: ablation with the old cold-start rule (12 s until 5 samples).
+- `adaptive_p90_cpd` (Phase 4.3): adaptive P90 plus a per-class Page–Hinkley change detector on log durations (threshold 3); on a detected change the class history is cut to its last 3 observations.
+- `adaptive_heartbeat_dynamic` (Phase 4.3): adaptive heartbeat whose visibility budget is re-read at every heartbeat instead of being fixed at receive time.
+- `adaptive_heartbeat_cpd_dynamic` (Phase 4.3): both.
 
 All adaptive policies now use a **partial-history cold start**: with 1–4 samples of a class, the timeout is 1.5 × the largest sample + margin, instead of a fixed 12 s.
 
@@ -109,7 +112,7 @@ Use [docs/iam-policy.json](docs/iam-policy.json) after replacing the account, re
 - `attempt_metrics.csv`: one record per processing attempt, including required timing and outcome fields.
 - `run_metrics.csv`: one row per scenario/policy/seed.
 - `aggregate_metrics.csv`: repeated-seed means, SDs, Student-t and bootstrap 95% CIs, and a Pareto-optimality flag.
-- `primary_hypotheses.csv`: the declared hypotheses H1–H8, each one paired test with Holm correction within that family only, and a `supported` flag.
+- `primary_hypotheses.csv`: the declared hypotheses H1–H11, each one paired test with Holm correction within that family only, and a `supported` flag.
 - `paired_comparisons.csv`: exploratory per-seed paired differences against `adaptive_p90` and `adaptive_heartbeat`, Holm-corrected across the whole file.
 - `report.html`: readable summary of the tables and figures.
 - `plots/*.png`: the ten original figures plus `11_pareto_front.png` and `12_cold_start_vs_steady.png`.
@@ -184,13 +187,13 @@ Heartbeat policies pay about one extra queue API call per job (≈4.1–5.2 vers
 
 ### Fixes before Phase 4
 
-- **Primary hypotheses.** Eight hypotheses are declared in `configs/full.json` and tested as one family (`primary_hypotheses.csv`); everything else is exploratory. H1–H4 re-test Phase 2/3 findings and are labelled post hoc. H5–H8 were committed (`bfab621`) before any evaluation-seed run that could test them.
+- **Primary hypotheses.** Eight hypotheses (H1–H8; H9–H11 were added in Phase 4.3) are declared in `configs/full.json` and tested as one family (`primary_hypotheses.csv`); everything else is exploratory. H1–H4 re-test Phase 2/3 findings and are labelled post hoc. H5–H8 were committed (`bfab621`) before any evaluation-seed run that could test them.
 - **Cold start.** The partial-history rule was chosen on tuning seeds 1001–1010, which do not overlap the evaluation seeds. On the evaluation seeds it cut duplicates in mixed/no-failure from 4.3% to 3.4% (H5, 20 seeds, Holm *p* = 0.002) and was neutral on heavy-tailed and shifting workloads.
 - **Hang sensitivity.** Adaptive heartbeat beat fixed heartbeat on duplicates, recovery and latency at every hang rate tested (0%, 2%, 8%, 20%) and with a 10 s liveness probe, in 15–20 of 20 seeds on each metric. The adaptive budget beats the fixed 40 s budget once hangs exist: at 0% hangs the fixed budget has the lower trade-off cost (0.05 vs 0.12 s/job), at 2% the adaptive budget does (0.35 vs 0.82 s/job).
 
 ### Phase 4: cost-aware and conformal timeouts (20 seeds)
 
-All eight primary hypotheses were supported (Holm-adjusted *p* ≤ 0.002). Six went the expected way in all 20 seeds; H5 and H8 in 13 seeds, with the other 7 exactly tied and none reversed.
+All eight hypotheses were supported. Six went the expected way in all 20 seeds; H5 and H8 in 13 seeds, with the other 7 exactly tied and none reversed. With the family since grown to eleven, every Holm-adjusted *p* for H1–H8 is ≤ 0.005.
 
 | ID | Claim | Mean difference |
 |---|---|---:|
@@ -208,6 +211,24 @@ All eight primary hypotheses were supported (Holm-adjusted *p* ≤ 0.002). Six w
 3. **The cost model needs calibration.** In the cost-ratio sweep, r = 0.25 had a lower measured trade-off cost than r = 1 (2.70 vs 3.21 s/job). The derivation charges only the overrun of a slow job, while the metric charges the full duplicate attempt, so r must be calibrated to the real cost of a duplicate.
 4. **Heartbeat policies still win overall.** Adaptive heartbeat has the lowest trade-off cost in most scenarios (e.g. 0.33 s/job vs 1.06–1.17 for the Phase 4 policies on mixed with crashes). Phase 4's ideas are applied to the lease-only controller so far; applying them to the heartbeat budget is the obvious next step.
 5. **Known degeneracy.** With a 40-sample window, conformal ranks above 40/41 ≈ 0.976 do not exist. When the cost-aware level exceeds that (rare failures), `adaptive_cost_conformal` always falls back to the cold-start rule, so its results in no-failure and low-failure scenarios reflect that rule, not conformal prediction.
+
+### Phase 4.3: reacting to workload shifts (20 seeds)
+
+Two mechanisms target the shift weakness. Their settings were chosen on tuning seeds 1001–1010, and H9–H11 were committed together with the code (`e49c2ea`) before the evaluation run.
+
+- **Change detection.** A two-sided Page–Hinkley test runs per class on log durations. It accumulates each observation's deviation from the running mean, minus a drift allowance of 0.05; when the accumulated rise or fall exceeds 3, the class history is cut to its last 3 observations, so the window refills with post-change durations instead of waiting for 40 completions.
+- **Dynamic heartbeat budget.** The budget is re-read at every heartbeat. Jobs already in flight when durations grow get the larger budget at once; hung jobs received during cold start get the tighter learned budget once history exists. Workers keep heartbeating after reaching a dynamic budget, since it may still grow.
+
+| ID | Claim | Mean difference | Seeds better / tied / worse | Holm *p* |
+|---|---|---:|---|---:|
+| H9 | Shift: change detection lowers adaptive P90's duplicates | −1.0 points (5.9% → 4.9%) | 17 / 3 / 0 | 0.0001 |
+| H10 | Shift: dynamic budget lowers adaptive heartbeat's duplicates | −0.5 points (0.9% → 0.4%) | 12 / 8 / 0 | 0.005 |
+| H11 | Mixed with hangs: dynamic budget speeds hang recovery | −1.3 s (11.3 → 10.1 s) | 15 / 0 / 5 | 0.012 |
+
+1. **The heartbeat shift tie is closed.** After a shift, the dynamic budget brings adaptive heartbeat to 0.4% duplicates and 12.3 s latency against fixed heartbeat's 0.3% and 12.2 s. With hangs after a shift it now beats fixed heartbeat (exploratory): hang recovery 13.6 vs 15.2 s, latency 17.4 vs 18.1 s, trade-off cost 1.27 vs 1.44 s/job.
+2. **Change detection helps the lease-only controller, not the heartbeat one.** Adaptive P90 gains 1.1 s of latency after a shift; adding it to the dynamic heartbeat changes almost nothing.
+3. **False alarms cost something on heavy tails.** The detector fires about 0.1–0.15 times per run on mixed workloads but about 3.5 times on Pareto workloads, where it slightly raises duplicates for the heartbeat variant (2.4–2.7% vs 2.2–2.5%) and slows P90's recovery by 0.8–1.8 s.
+4. **Heavy-tailed hangs remain the open gap.** Fixed heartbeat still recovers hung heavy-tailed jobs faster (16.5 s vs 20.3 s for the dynamic budget, 18.8 s with change detection).
 
 ## Limitations
 
