@@ -82,6 +82,7 @@ def summarize_run(
         "tradeoff_cost_s_per_job": (duplicate_seconds + float(recoveries.sum())) / max(completed_jobs, 1),
         "worker_failures": float(len(failures)),
         "worker_hangs": float(sim_result.get("worker_hangs", 0)),
+        "change_points_detected": float(sim_result.get("policy_change_points", 0)),
         "mean_hang_recovery_time_s": float(hang_recoveries.mean()) if hang_recoveries.size else math.nan,
         "p95_hang_recovery_time_s": float(np.percentile(hang_recoveries, 95)) if hang_recoveries.size else math.nan,
         "event_limit_reached": float(bool(sim_result["event_limit_reached"])),

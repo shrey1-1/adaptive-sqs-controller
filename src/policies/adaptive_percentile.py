@@ -26,6 +26,12 @@ class AdaptivePercentilePolicy(VisibilityPolicy):
       P(D > T) = p c_rec / ((1 - p) c_dup), i.e. q* = 1 - p r / (1 - p) with
       r = c_rec / c_dup. p is learned online from attempt outcomes with a
       Beta prior; q* is clamped to [q_min, q_max].
+    - ``change_detection``: a two-sided Page-Hinkley test per class on log
+      durations. When the cumulative deviation from the running mean exceeds
+      ``ph_lambda`` (after subtracting ``ph_delta`` per observation), the class
+      history is cut to its last ``keep_after_change`` observations, so the
+      window refills with post-change durations instead of waiting for 40 new
+      completions to push the old regime out.
     """
 
     name = "adaptive_p90"
@@ -51,6 +57,10 @@ class AdaptivePercentilePolicy(VisibilityPolicy):
         cost_ratio: float | None = None,
         failure_prior: tuple[float, float] = (1.0, 19.0),
         quantile_bounds: tuple[float, float] = (0.5, 0.995),
+        change_detection: bool = False,
+        ph_delta: float = 0.05,
+        ph_lambda: float = 2.0,
+        keep_after_change: int = 3,
         name: str | None = None,
     ) -> None:
         if not 0 < percentile <= 100:
@@ -67,6 +77,8 @@ class AdaptivePercentilePolicy(VisibilityPolicy):
             raise ValueError("cost_ratio must be positive")
         if not 0 < quantile_bounds[0] < quantile_bounds[1] < 1 or min(failure_prior) <= 0:
             raise ValueError("quantile_bounds must satisfy 0 < low < high < 1 and the prior must be positive")
+        if ph_delta < 0 or ph_lambda <= 0 or keep_after_change < 1:
+            raise ValueError("Page-Hinkley needs ph_delta >= 0, ph_lambda > 0 and keep_after_change >= 1")
         if name:
             self.name = name
         self.percentile = float(percentile)
@@ -92,6 +104,13 @@ class AdaptivePercentilePolicy(VisibilityPolicy):
         self.quantile_bounds = (float(quantile_bounds[0]), float(quantile_bounds[1]))
         self.attempts_seen = 0
         self.failures_seen = 0
+        self.change_detection = bool(change_detection)
+        self.ph_delta = float(ph_delta)
+        self.ph_lambda = float(ph_lambda)
+        self.keep_after_change = int(keep_after_change)
+        self.change_points = 0
+        # Per-class Page-Hinkley state: [n, mean, up, min_up, down, max_down].
+        self._ph: dict[str, list[float]] = {}
         self.history: dict[str, deque[float]] = defaultdict(
             lambda: deque(maxlen=self.history_window)
         )
@@ -146,6 +165,26 @@ class AdaptivePercentilePolicy(VisibilityPolicy):
 
     def observe(self, job_type: str, duration: float, now: float) -> None:
         self.history[job_type].append(float(duration))
+        if self.change_detection and self._page_hinkley(job_type, math.log(max(float(duration), 1e-9))):
+            recent = list(self.history[job_type])[-self.keep_after_change:]
+            self.history[job_type].clear()
+            self.history[job_type].extend(recent)
+            self.change_points += 1
+
+    def _page_hinkley(self, job_type: str, x: float) -> bool:
+        """Two-sided Page-Hinkley update; True (and a reset) when a shift is detected."""
+        state = self._ph.setdefault(job_type, [0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+        n, mean, up, min_up, down, max_down = state
+        n += 1
+        mean += (x - mean) / n
+        up += x - mean - self.ph_delta      # grows when durations rise
+        down += x - mean + self.ph_delta    # falls when durations drop
+        min_up, max_down = min(min_up, up), max(max_down, down)
+        if up - min_up > self.ph_lambda or max_down - down > self.ph_lambda:
+            self._ph[job_type] = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+            return True
+        self._ph[job_type] = [n, mean, up, min_up, down, max_down]
+        return False
 
     def observe_attempt_end(self, job_type: str, failed: bool, now: float) -> None:
         self.attempts_seen += 1

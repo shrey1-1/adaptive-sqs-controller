@@ -315,6 +315,33 @@
       "comparator": "adaptive_p90",
       "metric": "duplicate_processing_rate",
       "expected": "lower"
+    },
+    {
+      "id": "H9",
+      "declared": "before results (Phase 4.3); settings chosen on tuning seeds 1001-1010",
+      "scenario": "sudden_shift",
+      "reference": "adaptive_p90_cpd",
+      "comparator": "adaptive_p90",
+      "metric": "duplicate_processing_rate",
+      "expected": "lower"
+    },
+    {
+      "id": "H10",
+      "declared": "before results (Phase 4.3); settings chosen on tuning seeds 1001-1010",
+      "scenario": "sudden_shift",
+      "reference": "adaptive_heartbeat_dynamic",
+      "comparator": "adaptive_heartbeat",
+      "metric": "duplicate_processing_rate",
+      "expected": "lower"
+    },
+    {
+      "id": "H11",
+      "declared": "before results (Phase 4.3); settings chosen on tuning seeds 1001-1010",
+      "scenario": "mixed_with_hangs",
+      "reference": "adaptive_heartbeat_dynamic",
+      "comparator": "adaptive_heartbeat",
+      "metric": "mean_hang_recovery_time_s",
+      "expected": "lower"
     }
   ]
 }

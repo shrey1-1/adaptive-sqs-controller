@@ -221,6 +221,10 @@ class SQSSimulator:
         if attempt.extensions >= self.policy.max_extensions:
             return
         proposed = self.now + self.policy.extension_timeout(attempt.message.job_type, self.now)
+        if getattr(self.policy, "dynamic_budget", False):
+            # Re-read the budget at every heartbeat, so in-flight jobs pick up a
+            # larger budget as soon as the policy learns durations have grown.
+            attempt.visibility_budget = self.policy.max_total_visibility_for(attempt.message.job_type, self.now)
         cap = attempt.start_time + attempt.visibility_budget
         new_deadline = min(proposed, cap)
         if new_deadline > attempt.visibility_deadline:
@@ -229,7 +233,10 @@ class SQSSimulator:
             attempt.visibility_deadline = new_deadline
             self.api_operations["change_visibility"] += 1
             self._push(new_deadline, "visibility_expire", attempt.attempt_id)
-        if attempt.extensions < self.policy.max_extensions and attempt.visibility_deadline < cap - 1e-9:
+        # A static budget that has been reached can never grow, so heartbeats stop;
+        # a dynamic budget may grow later, so the worker keeps heartbeating.
+        reached_cap = attempt.visibility_deadline >= cap - 1e-9 and not getattr(self.policy, "dynamic_budget", False)
+        if attempt.extensions < self.policy.max_extensions and not reached_cap:
             self._push(self.now + float(attempt.heartbeat_interval), "heartbeat", attempt.attempt_id)
 
     def run(self) -> dict[str, Any]:
@@ -274,4 +281,5 @@ class SQSSimulator:
             "deleted_jobs": len(self.deleted),
             "event_limit_reached": processed >= safety_events,
             "policy_predicts_duration": self.policy.predicts_duration,
+            "policy_change_points": int(getattr(self.policy, "change_points", 0)),
         }

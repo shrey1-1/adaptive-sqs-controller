@@ -25,7 +25,9 @@ class AdaptiveHeartbeatPolicy(AdaptivePercentilePolicy):
 
     Before `min_history` observations a class uses `default_lease` and the
     global `max_total_visibility`. With `adaptive_budget=False` the budget is
-    always the global cap, isolating the effect of the adaptive lease.
+    always the global cap, isolating the effect of the adaptive lease. With
+    `dynamic_budget=True` the budget is re-read at every heartbeat instead of
+    being fixed when the message is received.
     """
 
     name = "adaptive_heartbeat"
@@ -45,6 +47,7 @@ class AdaptiveHeartbeatPolicy(AdaptivePercentilePolicy):
         max_total_visibility: float = 120.0,
         max_extensions: int = 1000,
         adaptive_budget: bool = True,
+        dynamic_budget: bool = False,
         name: str | None = None,
         **kwargs,
     ) -> None:
@@ -70,6 +73,9 @@ class AdaptiveHeartbeatPolicy(AdaptivePercentilePolicy):
         self.budget_factor = float(budget_factor)
         self.budget_margin = float(budget_margin)
         self.adaptive_budget = bool(adaptive_budget)
+        # False: the budget is fixed at receive time. True: the simulator re-reads
+        # it at each heartbeat, so a detected change reaches in-flight jobs.
+        self.dynamic_budget = bool(dynamic_budget)
         self.max_extensions = int(max_extensions)
         # Truthy marker so generic code treats this as a heartbeat policy; the
         # simulator uses the per-class value from heartbeat_interval_for().
