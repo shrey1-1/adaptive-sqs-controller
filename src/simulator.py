@@ -240,7 +240,7 @@ class SQSSimulator:
         attempt.failed = True
         self.busy.pop(attempt.worker_id, None)
         self.active_by_job.get(attempt.message.job_id, set()).discard(attempt.attempt_id)
-        self.policy.observe_attempt_end(attempt.message.job_type, True, self.now)
+        self.policy.observe_attempt_end(attempt.message.job_type, True, self.now, kind="hang")
         self._record(attempt, False, False)
 
     def _on_hang_detected(self, attempt: DeliveryAttempt) -> None:

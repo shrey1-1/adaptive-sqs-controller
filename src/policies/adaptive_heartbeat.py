@@ -48,6 +48,8 @@ class AdaptiveHeartbeatPolicy(AdaptivePercentilePolicy):
         max_extensions: int = 1000,
         adaptive_budget: bool = True,
         dynamic_budget: bool = False,
+        budget_cost_ratio: float | None = None,
+        hang_prior: tuple[float, float] = (1.0, 19.0),
         name: str | None = None,
         **kwargs,
     ) -> None:
@@ -57,6 +59,8 @@ class AdaptiveHeartbeatPolicy(AdaptivePercentilePolicy):
             raise ValueError("leases must be positive")
         if not 0 < budget_percentile <= 100 or budget_factor < 1 or budget_margin < 0:
             raise ValueError("budget must be a valid percentile scaled by >= 1 with a non-negative margin")
+        if budget_cost_ratio is not None and budget_cost_ratio <= 0:
+            raise ValueError("budget_cost_ratio must be positive")
         super().__init__(
             percentile=percentile,
             safety_margin=safety_margin,
@@ -76,6 +80,12 @@ class AdaptiveHeartbeatPolicy(AdaptivePercentilePolicy):
         # False: the budget is fixed at receive time. True: the simulator re-reads
         # it at each heartbeat, so a detected change reaches in-flight jobs.
         self.dynamic_budget = bool(dynamic_budget)
+        # Cost-aware budget: choose the budget quantile from the hang rate h as
+        # q* = 1 - h r / (1 - h), the Phase 4 derivation with hangs in place of
+        # crashes (under heartbeats, only hangs wait for the budget to run out).
+        self.budget_cost_ratio = None if budget_cost_ratio is None else float(budget_cost_ratio)
+        self.hang_prior = (float(hang_prior[0]), float(hang_prior[1]))
+        self.hangs_seen = 0
         self.max_extensions = int(max_extensions)
         # Truthy marker so generic code treats this as a heartbeat policy; the
         # simulator uses the per-class value from heartbeat_interval_for().
@@ -92,6 +102,23 @@ class AdaptiveHeartbeatPolicy(AdaptivePercentilePolicy):
         values = self.history[job_type]
         if not self.adaptive_budget or len(values) < self.min_history:
             return self.max_total_visibility
-        tail = float(np.percentile(np.asarray(values), self.budget_percentile))
-        budget = tail * self.budget_factor + self.budget_margin
+        if self.budget_cost_ratio is None:
+            tail = float(np.percentile(np.asarray(values), self.budget_percentile))
+            budget = tail * self.budget_factor + self.budget_margin
+        else:
+            q = self.budget_quantile()
+            budget = float(np.percentile(np.asarray(values), 100.0 * q)) + self.budget_margin
         return min(self.max_total_visibility, max(self.decide(job_type, now).timeout, budget))
+
+    def hang_rate(self) -> float:
+        a, b = self.hang_prior
+        return (self.hangs_seen + a) / (self.attempts_seen + a + b)
+
+    def budget_quantile(self) -> float:
+        h = self.hang_rate()
+        low, high = self.quantile_bounds
+        return min(high, max(low, 1.0 - h * self.budget_cost_ratio / (1.0 - h)))
+
+    def observe_attempt_end(self, job_type: str, failed: bool, now: float, kind: str = "crash") -> None:
+        super().observe_attempt_end(job_type, failed, now, kind)
+        self.hangs_seen += int(failed and kind == "hang")

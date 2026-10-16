@@ -51,6 +51,11 @@ DEFAULT_ADAPTIVE_VARIANTS = {
     "adaptive_p90_cpd": {"change_detection": True, "ph_lambda": 3.0},
     "adaptive_heartbeat_dynamic": {"type": "heartbeat", "dynamic_budget": True},
     "adaptive_heartbeat_cpd_dynamic": {"type": "heartbeat", "dynamic_budget": True, "change_detection": True, "ph_lambda": 3.0},
+    # Final improvements: spread-scaled change detection (reference chosen on
+    # tuning seeds), and the cost-aware heartbeat budget, rejected at tuning but
+    # kept as an exploratory variant so its result is shown on evaluation seeds.
+    "adaptive_p90_cpd_scaled": {"change_detection": True, "ph_lambda": 3.0, "ph_spread_reference": 0.25},
+    "adaptive_heartbeat_cost_budget": {"type": "heartbeat", "dynamic_budget": True, "budget_cost_ratio": 0.5},
 }
 
 

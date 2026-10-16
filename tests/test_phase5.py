@@ -149,3 +149,37 @@ class OutageTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class FinalImprovementTests(unittest.TestCase):
+    def test_spread_scaled_threshold_cuts_false_alarms_but_still_detects_shifts(self):
+        from src.policies import AdaptivePercentilePolicy
+
+        def alarms(values, scaled):
+            policy = AdaptivePercentilePolicy(
+                history_window=40, change_detection=True, ph_lambda=3.0, ph_spread_reference=0.25 if scaled else None
+            )
+            for value in values:
+                policy.observe("a", float(value), 0)
+            return policy.change_points
+
+        noisy = np.random.default_rng(5).lognormal(np.log(5.0), 0.6, size=600)
+        self.assertLess(alarms(noisy, scaled=True), alarms(noisy, scaled=False))
+        rng = np.random.default_rng(6)
+        shift = np.concatenate([rng.lognormal(np.log(5.0), 0.1, 40), rng.lognormal(np.log(10.0), 0.1, 10)])
+        self.assertGreaterEqual(alarms(shift, scaled=True), 1)
+
+    def test_cost_aware_budget_tightens_with_hangs(self):
+        from src.policies import AdaptiveHeartbeatPolicy
+
+        policy = AdaptiveHeartbeatPolicy(min_history=3, history_window=50, budget_cost_ratio=1.0, max_total_visibility=1000)
+        for value in np.linspace(1, 20, 40):
+            policy.observe("a", float(value), 0)
+        self.assertAlmostEqual(policy.budget_quantile(), 1 - 0.05 / 0.95)
+        relaxed = policy.max_total_visibility_for("a", 0)
+        for i in range(200):
+            policy.observe_attempt_end("a", i % 5 == 0, 0, kind="hang")  # 20% hangs
+        self.assertLess(policy.max_total_visibility_for("a", 0), relaxed)
+        crash_only = AdaptiveHeartbeatPolicy(budget_cost_ratio=1.0)
+        crash_only.observe_attempt_end("a", True, 0, kind="crash")
+        self.assertEqual(crash_only.hangs_seen, 0)

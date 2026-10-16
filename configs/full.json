@@ -497,6 +497,24 @@
       "comparator": "fixed_heartbeat",
       "metric": "poison_quarantine_time_s",
       "expected": "lower"
+    },
+    {
+      "id": "H17",
+      "declared": "before results (final improvements); spread reference chosen on tuning seeds 1001-1010",
+      "scenario": "heavy_tailed_no_failure",
+      "reference": "adaptive_p90_cpd_scaled",
+      "comparator": "adaptive_p90_cpd",
+      "metric": "change_points_detected",
+      "expected": "lower"
+    },
+    {
+      "id": "H18",
+      "declared": "before results (final improvements); spread reference chosen on tuning seeds 1001-1010",
+      "scenario": "sudden_shift",
+      "reference": "adaptive_p90_cpd_scaled",
+      "comparator": "adaptive_p90",
+      "metric": "duplicate_processing_rate",
+      "expected": "lower"
     }
   ]
 }

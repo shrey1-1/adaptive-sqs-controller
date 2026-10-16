@@ -61,6 +61,7 @@ class AdaptivePercentilePolicy(VisibilityPolicy):
         ph_delta: float = 0.05,
         ph_lambda: float = 2.0,
         keep_after_change: int = 3,
+        ph_spread_reference: float | None = None,
         name: str | None = None,
     ) -> None:
         if not 0 < percentile <= 100:
@@ -108,6 +109,10 @@ class AdaptivePercentilePolicy(VisibilityPolicy):
         self.ph_delta = float(ph_delta)
         self.ph_lambda = float(ph_lambda)
         self.keep_after_change = int(keep_after_change)
+        # When set, the threshold scales with the class's own spread of log
+        # durations relative to this reference (never below ph_lambda), so a
+        # noisy class needs a proportionally larger excursion to alarm.
+        self.ph_spread_reference = None if ph_spread_reference is None else float(ph_spread_reference)
         self.change_points = 0
         # Per-class Page-Hinkley state: [n, mean, up, min_up, down, max_down].
         self._ph: dict[str, list[float]] = {}
@@ -180,12 +185,16 @@ class AdaptivePercentilePolicy(VisibilityPolicy):
         up += x - mean - self.ph_delta      # grows when durations rise
         down += x - mean + self.ph_delta    # falls when durations drop
         min_up, max_down = min(min_up, up), max(max_down, down)
-        if up - min_up > self.ph_lambda or max_down - down > self.ph_lambda:
+        threshold = self.ph_lambda
+        if self.ph_spread_reference and len(self.history[job_type]) >= self.min_history:
+            spread = float(np.std(np.log(np.maximum(np.asarray(self.history[job_type]), 1e-9))))
+            threshold *= max(1.0, spread / self.ph_spread_reference)
+        if up - min_up > threshold or max_down - down > threshold:
             self._ph[job_type] = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
             return True
         self._ph[job_type] = [n, mean, up, min_up, down, max_down]
         return False
 
-    def observe_attempt_end(self, job_type: str, failed: bool, now: float) -> None:
+    def observe_attempt_end(self, job_type: str, failed: bool, now: float, kind: str = "crash") -> None:
         self.attempts_seen += 1
         self.failures_seen += int(failed)
