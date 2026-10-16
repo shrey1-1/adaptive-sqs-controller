@@ -15,7 +15,7 @@ a { color: #1769aa; } .note { color: #475569; }
 <h1>Adaptive SQS Visibility Timeout Controller</h1>
 <p class="note">Readable summary generated from executed simulation results. Detailed attempt-level data remains in the CSV files beside this report.</p>
 <div class="card"><h2>Experiment overview</h2>
-<p><b>Runs:</b> 136 &nbsp; <b>Attempt records:</b> 7,758 &nbsp; <b>Scenarios:</b> 4 &nbsp; <b>Policies:</b> 17</p>
+<p><b>Runs:</b> 152 &nbsp; <b>Attempt records:</b> 8,623 &nbsp; <b>Scenarios:</b> 4 &nbsp; <b>Policies:</b> 19</p>
 </div>
 <div class="card"><h2>Policy comparison</h2><table border="1" class="dataframe summary">
   <thead>
@@ -88,6 +88,19 @@ a { color: #1769aa; } .note { color: #475569; }
     </tr>
     <tr>
       <td>mixed_no_failure</td>
+      <td>adaptive_heartbeat_cost_budget</td>
+      <td>2</td>
+      <td>0.000</td>
+      <td>0.000</td>
+      <td>4.674</td>
+      <td>16.418</td>
+      <td>0.910</td>
+      <td>—</td>
+      <td>3.80</td>
+      <td>False</td>
+    </tr>
+    <tr>
+      <td>mixed_no_failure</td>
       <td>adaptive_heartbeat_cpd_dynamic</td>
       <td>2</td>
       <td>0.000</td>
@@ -141,6 +154,19 @@ a { color: #1769aa; } .note { color: #475569; }
     <tr>
       <td>mixed_no_failure</td>
       <td>adaptive_p90_cpd</td>
+      <td>2</td>
+      <td>0.038</td>
+      <td>0.012</td>
+      <td>6.268</td>
+      <td>17.316</td>
+      <td>0.865</td>
+      <td>—</td>
+      <td>3.04</td>
+      <td>False</td>
+    </tr>
+    <tr>
+      <td>mixed_no_failure</td>
+      <td>adaptive_p90_cpd_scaled</td>
       <td>2</td>
       <td>0.038</td>
       <td>0.012</td>
@@ -309,6 +335,19 @@ a { color: #1769aa; } .note { color: #475569; }
     </tr>
     <tr>
       <td>mixed_with_failures</td>
+      <td>adaptive_heartbeat_cost_budget</td>
+      <td>2</td>
+      <td>0.000</td>
+      <td>0.000</td>
+      <td>4.811</td>
+      <td>16.418</td>
+      <td>0.910</td>
+      <td>3.107</td>
+      <td>3.83</td>
+      <td>True</td>
+    </tr>
+    <tr>
+      <td>mixed_with_failures</td>
       <td>adaptive_heartbeat_cpd_dynamic</td>
       <td>2</td>
       <td>0.000</td>
@@ -362,6 +401,19 @@ a { color: #1769aa; } .note { color: #475569; }
     <tr>
       <td>mixed_with_failures</td>
       <td>adaptive_p90_cpd</td>
+      <td>2</td>
+      <td>0.037</td>
+      <td>0.012</td>
+      <td>5.925</td>
+      <td>16.994</td>
+      <td>0.866</td>
+      <td>5.440</td>
+      <td>3.07</td>
+      <td>False</td>
+    </tr>
+    <tr>
+      <td>mixed_with_failures</td>
+      <td>adaptive_p90_cpd_scaled</td>
       <td>2</td>
       <td>0.037</td>
       <td>0.012</td>
@@ -530,6 +582,19 @@ a { color: #1769aa; } .note { color: #475569; }
     </tr>
     <tr>
       <td>mixed_with_hangs</td>
+      <td>adaptive_heartbeat_cost_budget</td>
+      <td>2</td>
+      <td>0.000</td>
+      <td>0.000</td>
+      <td>8.520</td>
+      <td>20.503</td>
+      <td>0.796</td>
+      <td>8.699</td>
+      <td>4.34</td>
+      <td>False</td>
+    </tr>
+    <tr>
+      <td>mixed_with_hangs</td>
       <td>adaptive_heartbeat_cpd_dynamic</td>
       <td>2</td>
       <td>0.000</td>
@@ -583,6 +648,19 @@ a { color: #1769aa; } .note { color: #475569; }
     <tr>
       <td>mixed_with_hangs</td>
       <td>adaptive_p90_cpd</td>
+      <td>2</td>
+      <td>0.033</td>
+      <td>0.011</td>
+      <td>9.161</td>
+      <td>19.877</td>
+      <td>0.829</td>
+      <td>3.998</td>
+      <td>3.20</td>
+      <td>True</td>
+    </tr>
+    <tr>
+      <td>mixed_with_hangs</td>
+      <td>adaptive_p90_cpd_scaled</td>
       <td>2</td>
       <td>0.033</td>
       <td>0.011</td>
@@ -751,6 +829,19 @@ a { color: #1769aa; } .note { color: #475569; }
     </tr>
     <tr>
       <td>sudden_shift</td>
+      <td>adaptive_heartbeat_cost_budget</td>
+      <td>2</td>
+      <td>0.048</td>
+      <td>0.059</td>
+      <td>12.337</td>
+      <td>29.439</td>
+      <td>0.568</td>
+      <td>—</td>
+      <td>4.62</td>
+      <td>False</td>
+    </tr>
+    <tr>
+      <td>sudden_shift</td>
       <td>adaptive_heartbeat_cpd_dynamic</td>
       <td>2</td>
       <td>0.000</td>
@@ -812,6 +903,19 @@ a { color: #1769aa; } .note { color: #475569; }
       <td>0.534</td>
       <td>—</td>
       <td>3.09</td>
+      <td>False</td>
+    </tr>
+    <tr>
+      <td>sudden_shift</td>
+      <td>adaptive_p90_cpd_scaled</td>
+      <td>2</td>
+      <td>0.090</td>
+      <td>0.109</td>
+      <td>13.455</td>
+      <td>33.290</td>
+      <td>0.523</td>
+      <td>—</td>
+      <td>3.10</td>
       <td>False</td>
     </tr>
     <tr>
@@ -1084,6 +1188,42 @@ a { color: #1769aa; } .note { color: #475569; }
     <tr>
       <td>mixed_no_failure</td>
       <td>adaptive_p90</td>
+      <td>adaptive_heartbeat_cost_budget</td>
+      <td>duplicate_processing_rate</td>
+      <td>2</td>
+      <td>0.0385</td>
+      <td>0.0385</td>
+      <td>0.0385</td>
+      <td>0.3458</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <td>mixed_no_failure</td>
+      <td>adaptive_p90</td>
+      <td>adaptive_heartbeat_cost_budget</td>
+      <td>mean_failure_recovery_time_s</td>
+      <td>0</td>
+      <td>—</td>
+      <td>—</td>
+      <td>—</td>
+      <td>—</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>mixed_no_failure</td>
+      <td>adaptive_p90</td>
+      <td>adaptive_heartbeat_cost_budget</td>
+      <td>steady_duplicate_processing_rate</td>
+      <td>2</td>
+      <td>0.0122</td>
+      <td>-0.1428</td>
+      <td>0.1671</td>
+      <td>1.0000</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <td>mixed_no_failure</td>
+      <td>adaptive_p90</td>
       <td>adaptive_heartbeat_cpd_dynamic</td>
       <td>duplicate_processing_rate</td>
       <td>2</td>
@@ -1217,6 +1357,42 @@ a { color: #1769aa; } .note { color: #475569; }
       <td>mixed_no_failure</td>
       <td>adaptive_p90</td>
       <td>adaptive_p90_cpd</td>
+      <td>steady_duplicate_processing_rate</td>
+      <td>2</td>
+      <td>0.0000</td>
+      <td>0.0000</td>
+      <td>0.0000</td>
+      <td>—</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>mixed_no_failure</td>
+      <td>adaptive_p90</td>
+      <td>adaptive_p90_cpd_scaled</td>
+      <td>duplicate_processing_rate</td>
+      <td>2</td>
+      <td>0.0000</td>
+      <td>0.0000</td>
+      <td>0.0000</td>
+      <td>—</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>mixed_no_failure</td>
+      <td>adaptive_p90</td>
+      <td>adaptive_p90_cpd_scaled</td>
+      <td>mean_failure_recovery_time_s</td>
+      <td>0</td>
+      <td>—</td>
+      <td>—</td>
+      <td>—</td>
+      <td>—</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>mixed_no_failure</td>
+      <td>adaptive_p90</td>
+      <td>adaptive_p90_cpd_scaled</td>
       <td>steady_duplicate_processing_rate</td>
       <td>2</td>
       <td>0.0000</td>
@@ -1660,6 +1836,42 @@ a { color: #1769aa; } .note { color: #475569; }
     <tr>
       <td>mixed_with_failures</td>
       <td>adaptive_p90</td>
+      <td>adaptive_heartbeat_cost_budget</td>
+      <td>duplicate_processing_rate</td>
+      <td>2</td>
+      <td>0.0374</td>
+      <td>0.0241</td>
+      <td>0.0507</td>
+      <td>0.5000</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <td>mixed_with_failures</td>
+      <td>adaptive_p90</td>
+      <td>adaptive_heartbeat_cost_budget</td>
+      <td>mean_failure_recovery_time_s</td>
+      <td>1</td>
+      <td>2.3333</td>
+      <td>—</td>
+      <td>—</td>
+      <td>1.0000</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <td>mixed_with_failures</td>
+      <td>adaptive_p90</td>
+      <td>adaptive_heartbeat_cost_budget</td>
+      <td>steady_duplicate_processing_rate</td>
+      <td>2</td>
+      <td>0.0122</td>
+      <td>-0.1428</td>
+      <td>0.1671</td>
+      <td>1.0000</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <td>mixed_with_failures</td>
+      <td>adaptive_p90</td>
       <td>adaptive_heartbeat_cpd_dynamic</td>
       <td>duplicate_processing_rate</td>
       <td>2</td>
@@ -1793,6 +2005,42 @@ a { color: #1769aa; } .note { color: #475569; }
       <td>mixed_with_failures</td>
       <td>adaptive_p90</td>
       <td>adaptive_p90_cpd</td>
+      <td>steady_duplicate_processing_rate</td>
+      <td>2</td>
+      <td>0.0000</td>
+      <td>0.0000</td>
+      <td>0.0000</td>
+      <td>—</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>mixed_with_failures</td>
+      <td>adaptive_p90</td>
+      <td>adaptive_p90_cpd_scaled</td>
+      <td>duplicate_processing_rate</td>
+      <td>2</td>
+      <td>0.0000</td>
+      <td>0.0000</td>
+      <td>0.0000</td>
+      <td>—</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>mixed_with_failures</td>
+      <td>adaptive_p90</td>
+      <td>adaptive_p90_cpd_scaled</td>
+      <td>mean_failure_recovery_time_s</td>
+      <td>1</td>
+      <td>0.0000</td>
+      <td>—</td>
+      <td>—</td>
+      <td>—</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>mixed_with_failures</td>
+      <td>adaptive_p90</td>
+      <td>adaptive_p90_cpd_scaled</td>
       <td>steady_duplicate_processing_rate</td>
       <td>2</td>
       <td>0.0000</td>
@@ -2236,6 +2484,42 @@ a { color: #1769aa; } .note { color: #475569; }
     <tr>
       <td>mixed_with_hangs</td>
       <td>adaptive_p90</td>
+      <td>adaptive_heartbeat_cost_budget</td>
+      <td>duplicate_processing_rate</td>
+      <td>2</td>
+      <td>0.0334</td>
+      <td>0.0192</td>
+      <td>0.0475</td>
+      <td>0.5000</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <td>mixed_with_hangs</td>
+      <td>adaptive_p90</td>
+      <td>adaptive_heartbeat_cost_budget</td>
+      <td>mean_failure_recovery_time_s</td>
+      <td>2</td>
+      <td>-4.7006</td>
+      <td>-32.0318</td>
+      <td>22.6307</td>
+      <td>0.5000</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <td>mixed_with_hangs</td>
+      <td>adaptive_p90</td>
+      <td>adaptive_heartbeat_cost_budget</td>
+      <td>steady_duplicate_processing_rate</td>
+      <td>2</td>
+      <td>0.0109</td>
+      <td>-0.1272</td>
+      <td>0.1490</td>
+      <td>1.0000</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <td>mixed_with_hangs</td>
+      <td>adaptive_p90</td>
       <td>adaptive_heartbeat_cpd_dynamic</td>
       <td>duplicate_processing_rate</td>
       <td>2</td>
@@ -2369,6 +2653,42 @@ a { color: #1769aa; } .note { color: #475569; }
       <td>mixed_with_hangs</td>
       <td>adaptive_p90</td>
       <td>adaptive_p90_cpd</td>
+      <td>steady_duplicate_processing_rate</td>
+      <td>2</td>
+      <td>0.0000</td>
+      <td>0.0000</td>
+      <td>0.0000</td>
+      <td>—</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>mixed_with_hangs</td>
+      <td>adaptive_p90</td>
+      <td>adaptive_p90_cpd_scaled</td>
+      <td>duplicate_processing_rate</td>
+      <td>2</td>
+      <td>0.0000</td>
+      <td>0.0000</td>
+      <td>0.0000</td>
+      <td>—</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>mixed_with_hangs</td>
+      <td>adaptive_p90</td>
+      <td>adaptive_p90_cpd_scaled</td>
+      <td>mean_failure_recovery_time_s</td>
+      <td>2</td>
+      <td>0.0000</td>
+      <td>0.0000</td>
+      <td>0.0000</td>
+      <td>—</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>mixed_with_hangs</td>
+      <td>adaptive_p90</td>
+      <td>adaptive_p90_cpd_scaled</td>
       <td>steady_duplicate_processing_rate</td>
       <td>2</td>
       <td>0.0000</td>
@@ -2812,6 +3132,42 @@ a { color: #1769aa; } .note { color: #475569; }
     <tr>
       <td>sudden_shift</td>
       <td>adaptive_p90</td>
+      <td>adaptive_heartbeat_cost_budget</td>
+      <td>duplicate_processing_rate</td>
+      <td>2</td>
+      <td>0.0509</td>
+      <td>-0.1434</td>
+      <td>0.2453</td>
+      <td>0.5000</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <td>sudden_shift</td>
+      <td>adaptive_p90</td>
+      <td>adaptive_heartbeat_cost_budget</td>
+      <td>mean_failure_recovery_time_s</td>
+      <td>0</td>
+      <td>—</td>
+      <td>—</td>
+      <td>—</td>
+      <td>—</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>sudden_shift</td>
+      <td>adaptive_p90</td>
+      <td>adaptive_heartbeat_cost_budget</td>
+      <td>steady_duplicate_processing_rate</td>
+      <td>2</td>
+      <td>0.0612</td>
+      <td>-0.1667</td>
+      <td>0.2892</td>
+      <td>0.5000</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <td>sudden_shift</td>
+      <td>adaptive_p90</td>
       <td>adaptive_heartbeat_cpd_dynamic</td>
       <td>duplicate_processing_rate</td>
       <td>2</td>
@@ -2950,6 +3306,42 @@ a { color: #1769aa; } .note { color: #475569; }
       <td>0.0216</td>
       <td>-0.2534</td>
       <td>0.2967</td>
+      <td>1.0000</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <td>sudden_shift</td>
+      <td>adaptive_p90</td>
+      <td>adaptive_p90_cpd_scaled</td>
+      <td>duplicate_processing_rate</td>
+      <td>2</td>
+      <td>0.0087</td>
+      <td>-0.1023</td>
+      <td>0.1197</td>
+      <td>1.0000</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <td>sudden_shift</td>
+      <td>adaptive_p90</td>
+      <td>adaptive_p90_cpd_scaled</td>
+      <td>mean_failure_recovery_time_s</td>
+      <td>0</td>
+      <td>—</td>
+      <td>—</td>
+      <td>—</td>
+      <td>—</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>sudden_shift</td>
+      <td>adaptive_p90</td>
+      <td>adaptive_p90_cpd_scaled</td>
+      <td>steady_duplicate_processing_rate</td>
+      <td>2</td>
+      <td>0.0106</td>
+      <td>-0.1237</td>
+      <td>0.1449</td>
       <td>1.0000</td>
       <td>1.0</td>
     </tr>
@@ -3352,6 +3744,42 @@ a { color: #1769aa; } .note { color: #475569; }
     <tr>
       <td>mixed_no_failure</td>
       <td>adaptive_heartbeat</td>
+      <td>adaptive_heartbeat_cost_budget</td>
+      <td>duplicate_processing_rate</td>
+      <td>2</td>
+      <td>0.0000</td>
+      <td>0.0000</td>
+      <td>0.0000</td>
+      <td>—</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>mixed_no_failure</td>
+      <td>adaptive_heartbeat</td>
+      <td>adaptive_heartbeat_cost_budget</td>
+      <td>mean_failure_recovery_time_s</td>
+      <td>0</td>
+      <td>—</td>
+      <td>—</td>
+      <td>—</td>
+      <td>—</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>mixed_no_failure</td>
+      <td>adaptive_heartbeat</td>
+      <td>adaptive_heartbeat_cost_budget</td>
+      <td>steady_duplicate_processing_rate</td>
+      <td>2</td>
+      <td>0.0000</td>
+      <td>0.0000</td>
+      <td>0.0000</td>
+      <td>—</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>mixed_no_failure</td>
+      <td>adaptive_heartbeat</td>
       <td>adaptive_heartbeat_cpd_dynamic</td>
       <td>duplicate_processing_rate</td>
       <td>2</td>
@@ -3521,6 +3949,42 @@ a { color: #1769aa; } .note { color: #475569; }
       <td>mixed_no_failure</td>
       <td>adaptive_heartbeat</td>
       <td>adaptive_p90_cpd</td>
+      <td>steady_duplicate_processing_rate</td>
+      <td>2</td>
+      <td>-0.0122</td>
+      <td>-0.1671</td>
+      <td>0.1428</td>
+      <td>1.0000</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <td>mixed_no_failure</td>
+      <td>adaptive_heartbeat</td>
+      <td>adaptive_p90_cpd_scaled</td>
+      <td>duplicate_processing_rate</td>
+      <td>2</td>
+      <td>-0.0385</td>
+      <td>-0.0385</td>
+      <td>-0.0385</td>
+      <td>0.3458</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <td>mixed_no_failure</td>
+      <td>adaptive_heartbeat</td>
+      <td>adaptive_p90_cpd_scaled</td>
+      <td>mean_failure_recovery_time_s</td>
+      <td>0</td>
+      <td>—</td>
+      <td>—</td>
+      <td>—</td>
+      <td>—</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>mixed_no_failure</td>
+      <td>adaptive_heartbeat</td>
+      <td>adaptive_p90_cpd_scaled</td>
       <td>steady_duplicate_processing_rate</td>
       <td>2</td>
       <td>-0.0122</td>
@@ -3928,6 +4392,42 @@ a { color: #1769aa; } .note { color: #475569; }
     <tr>
       <td>mixed_with_failures</td>
       <td>adaptive_heartbeat</td>
+      <td>adaptive_heartbeat_cost_budget</td>
+      <td>duplicate_processing_rate</td>
+      <td>2</td>
+      <td>0.0000</td>
+      <td>0.0000</td>
+      <td>0.0000</td>
+      <td>—</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>mixed_with_failures</td>
+      <td>adaptive_heartbeat</td>
+      <td>adaptive_heartbeat_cost_budget</td>
+      <td>mean_failure_recovery_time_s</td>
+      <td>1</td>
+      <td>0.0000</td>
+      <td>—</td>
+      <td>—</td>
+      <td>—</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>mixed_with_failures</td>
+      <td>adaptive_heartbeat</td>
+      <td>adaptive_heartbeat_cost_budget</td>
+      <td>steady_duplicate_processing_rate</td>
+      <td>2</td>
+      <td>0.0000</td>
+      <td>0.0000</td>
+      <td>0.0000</td>
+      <td>—</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>mixed_with_failures</td>
+      <td>adaptive_heartbeat</td>
       <td>adaptive_heartbeat_cpd_dynamic</td>
       <td>duplicate_processing_rate</td>
       <td>2</td>
@@ -4097,6 +4597,42 @@ a { color: #1769aa; } .note { color: #475569; }
       <td>mixed_with_failures</td>
       <td>adaptive_heartbeat</td>
       <td>adaptive_p90_cpd</td>
+      <td>steady_duplicate_processing_rate</td>
+      <td>2</td>
+      <td>-0.0122</td>
+      <td>-0.1671</td>
+      <td>0.1428</td>
+      <td>1.0000</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <td>mixed_with_failures</td>
+      <td>adaptive_heartbeat</td>
+      <td>adaptive_p90_cpd_scaled</td>
+      <td>duplicate_processing_rate</td>
+      <td>2</td>
+      <td>-0.0374</td>
+      <td>-0.0507</td>
+      <td>-0.0241</td>
+      <td>0.5000</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <td>mixed_with_failures</td>
+      <td>adaptive_heartbeat</td>
+      <td>adaptive_p90_cpd_scaled</td>
+      <td>mean_failure_recovery_time_s</td>
+      <td>1</td>
+      <td>-2.3333</td>
+      <td>—</td>
+      <td>—</td>
+      <td>1.0000</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <td>mixed_with_failures</td>
+      <td>adaptive_heartbeat</td>
+      <td>adaptive_p90_cpd_scaled</td>
       <td>steady_duplicate_processing_rate</td>
       <td>2</td>
       <td>-0.0122</td>
@@ -4504,6 +5040,42 @@ a { color: #1769aa; } .note { color: #475569; }
     <tr>
       <td>mixed_with_hangs</td>
       <td>adaptive_heartbeat</td>
+      <td>adaptive_heartbeat_cost_budget</td>
+      <td>duplicate_processing_rate</td>
+      <td>2</td>
+      <td>0.0000</td>
+      <td>0.0000</td>
+      <td>0.0000</td>
+      <td>—</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>mixed_with_hangs</td>
+      <td>adaptive_heartbeat</td>
+      <td>adaptive_heartbeat_cost_budget</td>
+      <td>mean_failure_recovery_time_s</td>
+      <td>2</td>
+      <td>4.8514</td>
+      <td>-46.2771</td>
+      <td>55.9800</td>
+      <td>0.5000</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <td>mixed_with_hangs</td>
+      <td>adaptive_heartbeat</td>
+      <td>adaptive_heartbeat_cost_budget</td>
+      <td>steady_duplicate_processing_rate</td>
+      <td>2</td>
+      <td>0.0000</td>
+      <td>0.0000</td>
+      <td>0.0000</td>
+      <td>—</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>mixed_with_hangs</td>
+      <td>adaptive_heartbeat</td>
       <td>adaptive_heartbeat_cpd_dynamic</td>
       <td>duplicate_processing_rate</td>
       <td>2</td>
@@ -4673,6 +5245,42 @@ a { color: #1769aa; } .note { color: #475569; }
       <td>mixed_with_hangs</td>
       <td>adaptive_heartbeat</td>
       <td>adaptive_p90_cpd</td>
+      <td>steady_duplicate_processing_rate</td>
+      <td>2</td>
+      <td>-0.0109</td>
+      <td>-0.1490</td>
+      <td>0.1272</td>
+      <td>1.0000</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <td>mixed_with_hangs</td>
+      <td>adaptive_heartbeat</td>
+      <td>adaptive_p90_cpd_scaled</td>
+      <td>duplicate_processing_rate</td>
+      <td>2</td>
+      <td>-0.0334</td>
+      <td>-0.0475</td>
+      <td>-0.0192</td>
+      <td>0.5000</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <td>mixed_with_hangs</td>
+      <td>adaptive_heartbeat</td>
+      <td>adaptive_p90_cpd_scaled</td>
+      <td>mean_failure_recovery_time_s</td>
+      <td>2</td>
+      <td>9.5520</td>
+      <td>-68.9077</td>
+      <td>88.0118</td>
+      <td>0.5000</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <td>mixed_with_hangs</td>
+      <td>adaptive_heartbeat</td>
+      <td>adaptive_p90_cpd_scaled</td>
       <td>steady_duplicate_processing_rate</td>
       <td>2</td>
       <td>-0.0109</td>
@@ -5080,6 +5688,42 @@ a { color: #1769aa; } .note { color: #475569; }
     <tr>
       <td>sudden_shift</td>
       <td>adaptive_heartbeat</td>
+      <td>adaptive_heartbeat_cost_budget</td>
+      <td>duplicate_processing_rate</td>
+      <td>2</td>
+      <td>-0.0091</td>
+      <td>-0.1243</td>
+      <td>0.1062</td>
+      <td>1.0000</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <td>sudden_shift</td>
+      <td>adaptive_heartbeat</td>
+      <td>adaptive_heartbeat_cost_budget</td>
+      <td>mean_failure_recovery_time_s</td>
+      <td>0</td>
+      <td>—</td>
+      <td>—</td>
+      <td>—</td>
+      <td>—</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>sudden_shift</td>
+      <td>adaptive_heartbeat</td>
+      <td>adaptive_heartbeat_cost_budget</td>
+      <td>steady_duplicate_processing_rate</td>
+      <td>2</td>
+      <td>-0.0111</td>
+      <td>-0.1518</td>
+      <td>0.1296</td>
+      <td>1.0000</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <td>sudden_shift</td>
+      <td>adaptive_heartbeat</td>
       <td>adaptive_heartbeat_cpd_dynamic</td>
       <td>duplicate_processing_rate</td>
       <td>2</td>
@@ -5255,6 +5899,42 @@ a { color: #1769aa; } .note { color: #475569; }
       <td>-0.6943</td>
       <td>0.5930</td>
       <td>1.0000</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <td>sudden_shift</td>
+      <td>adaptive_heartbeat</td>
+      <td>adaptive_p90_cpd_scaled</td>
+      <td>duplicate_processing_rate</td>
+      <td>2</td>
+      <td>-0.0512</td>
+      <td>-0.4718</td>
+      <td>0.3694</td>
+      <td>0.5000</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <td>sudden_shift</td>
+      <td>adaptive_heartbeat</td>
+      <td>adaptive_p90_cpd_scaled</td>
+      <td>mean_failure_recovery_time_s</td>
+      <td>0</td>
+      <td>—</td>
+      <td>—</td>
+      <td>—</td>
+      <td>—</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>sudden_shift</td>
+      <td>adaptive_heartbeat</td>
+      <td>adaptive_p90_cpd_scaled</td>
+      <td>steady_duplicate_processing_rate</td>
+      <td>2</td>
+      <td>-0.0617</td>
+      <td>-0.5647</td>
+      <td>0.4412</td>
+      <td>0.5000</td>
       <td>1.0</td>
     </tr>
     <tr>

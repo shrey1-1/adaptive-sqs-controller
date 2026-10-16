@@ -112,7 +112,7 @@ Use [docs/iam-policy.json](docs/iam-policy.json) after replacing the account, re
 - `attempt_metrics.csv`: one record per processing attempt, including required timing and outcome fields.
 - `run_metrics.csv`: one row per scenario/policy/seed.
 - `aggregate_metrics.csv`: repeated-seed means, SDs, Student-t and bootstrap 95% CIs, and a Pareto-optimality flag.
-- `primary_hypotheses.csv`: the declared hypotheses H1–H11, each one paired test with Holm correction within that family only, and a `supported` flag.
+- `primary_hypotheses.csv`: the declared hypotheses H1–H18, each one paired test with Holm correction within that family only, and a `supported` flag.
 - `paired_comparisons.csv`: exploratory per-seed paired differences against `adaptive_p90` and `adaptive_heartbeat`, Holm-corrected across the whole file.
 - `report.html`: readable summary of the tables and figures.
 - `plots/*.png`: the ten original figures plus `11_pareto_front.png` and `12_cold_start_vs_steady.png`.
@@ -229,6 +229,49 @@ Two mechanisms target the shift weakness. Their settings were chosen on tuning s
 2. **Change detection helps the lease-only controller, not the heartbeat one.** Adaptive P90 gains 1.1 s of latency after a shift; adding it to the dynamic heartbeat changes almost nothing.
 3. **False alarms cost something on heavy tails.** The detector fires about 0.1–0.15 times per run on mixed workloads but about 3.5 times on Pareto workloads, where it slightly raises duplicates for the heartbeat variant (2.4–2.7% vs 2.2–2.5%) and slows P90's recovery by 0.8–1.8 s.
 4. **Heavy-tailed hangs remain the open gap.** Fixed heartbeat still recovers hung heavy-tailed jobs faster (16.5 s vs 20.3 s for the dynamic budget, 18.8 s with change detection).
+
+### Phase 5: realism (20 seeds)
+
+The simulator was first pinned by seven verification tests (closed-form redelivery and API counts, crash recovery, heartbeat counts, and the Erlang C mean wait of an M/M/c queue). Then optional realism was added, all off by default; the smoke results regenerate byte for byte with the defaults.
+
+| Feature | Setting in the realistic scenarios |
+|---|---|
+| Dead-letter queue | `maxReceiveCount` = 5 (2, 3, 5, 10 in the DLQ sweep) |
+| Poison messages | 3% of jobs fail on every attempt (`realistic_poison`) |
+| Retry jitter | each attempt's duration × a mean-one log-normal factor, σ = 0.2 |
+| Worker speeds | fixed mean-one log-normal factor per worker, σ = 0.25 |
+| API latency | 50 ms before a receive starts, a delete lands or an extension applies |
+| Batched receives | up to 10 messages per call (counted per dispatch round) |
+| Correlated outages | about one per 100 s, crashing 3 of 10 workers at once |
+
+H12–H16 were committed with the code (`71a1a81`) before the evaluation run. All five held in all 20 seeds.
+
+| ID | Claim | Mean difference |
+|---|---|---:|
+| H12 | `maxReceiveCount` = 3: adaptive P90 dead-letters fewer healthy jobs than the overall-mean timeout | −4.6 points (4.6% → 0.0%) |
+| H13 | Realistic shift: adaptive P90 has fewer duplicates than pre-tuned per class (H1 survives) | −10.4 points |
+| H14 | Realistic hangs: dynamic heartbeat recovers hung jobs faster than fixed heartbeat (H11 survives) | −5.3 s |
+| H15 | Realistic hangs: dynamic heartbeat has fewer duplicates than fixed heartbeat (H3 survives) | −2.6 points |
+| H16 | Realistic poison: dynamic heartbeat quarantines poison faster than fixed heartbeat | −3.6 s (29.8 → 26.2 s) |
+
+1. **Short timeouts lose healthy jobs to the DLQ.** At `maxReceiveCount` = 2, `fixed_short` dead-lettered 23% of healthy jobs and `fixed_overall_mean` 15%; adaptive and heartbeat policies stayed at or below 0.2%. Every wrongly dead-lettered job had already been processed, so replaying the DLQ would duplicate it. At 10 receives no policy lost a job.
+2. **The headline results survive realism.** Adaptive heartbeat with a dynamic budget has the lowest trade-off cost in the realistic mixed, hang, poison and shift scenarios (e.g. 1.08 vs 2.12 s/job for fixed heartbeat with hangs), and after a realistic shift it now beats fixed heartbeat on duplicates (0.7% vs 1.5%).
+3. **Poison quarantine depends on lease length.** Five redeliveries take 26 s under the adaptive heartbeat, 30 s under the fixed heartbeat, about 40 s under lease-only adaptive policies and 150 s under `fixed_long`.
+4. **Heavy-tailed hangs remain the exception.** In the realistic heavy-tailed hang scenario, fixed heartbeat still has the lower trade-off cost (2.31 vs 2.54 s/job).
+
+### Final improvements
+
+- **Cost-aware heartbeat budget (rejected).** Choosing the budget quantile from the hang rate (q* = 1 − h·r/(1 − h)) shortens budgets and trades hang recovery for duplicates. On tuning seeds no ratio beat fixed heartbeat's trade-off cost on heavy-tailed hangs (best 2.58 vs 2.54 s/job), and every setting raised duplicates elsewhere. It is kept as the exploratory variant `adaptive_heartbeat_cost_budget`. Conclusion: for Pareto durations, the remaining gap is a trade-off frontier, not a fixable defect.
+- **Spread-scaled change detection (adopted as `adaptive_p90_cpd_scaled`).** The Page–Hinkley threshold is multiplied by max(1, spread / 0.25), where spread is the class's standard deviation of log durations. On tuning seeds this cut heavy-tailed false alarms from 2.5 to 0.6 per run with the full post-shift benefit kept.
+
+On the evaluation seeds both final hypotheses were supported, bringing the declared family to **18 of 18**:
+
+| ID | Claim | Mean difference | Seeds better / tied / worse | Holm *p* |
+|---|---|---:|---|---:|
+| H17 | Heavy-tailed: scaled detection raises fewer false alarms than unscaled | −2.85 per run (3.65 → 0.80) | 19 / 1 / 0 | 0.0008 |
+| H18 | Shift: scaled detection still lowers adaptive P90's duplicates | −0.6 points (5.9% → 5.2%) | 13 / 5 / 2 | 0.0012 |
+
+The scaled detector keeps most, not all, of the shift benefit (5.2% against 4.9% unscaled) and recovers part of the heavy-tail recovery cost (8.5 s against 9.1 s with failures). The rejected cost-aware heartbeat budget confirmed its rejection on evaluation seeds: on heavy-tailed hangs its trade-off cost was 3.10 s/job against 2.50 for fixed heartbeat.
 
 ## Limitations
 

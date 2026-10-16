@@ -10,7 +10,7 @@ Event ordering is deterministic. Failures use common random numbers keyed by `(s
 
 ## External validity
 
-No network latency, autoscaling delay, heterogeneous workers, correlated failures, in-flight quota, retention expiry, or SQS replicated-copy anomaly is modeled. Hung workers are modeled as alive-but-stalled processes whose heartbeats continue until the visibility budget is exhausted and which are restarted exactly when their lease expires; real supervisors may detect hangs earlier (liveness probes) or later. Crash and hang rates are independent per attempt. Results demonstrate mechanisms and comparative behavior under controlled assumptions; they are not AWS production benchmarks.
+Phase 5 adds optional network latency (constant), heterogeneous workers, retry jitter, correlated outages, batched receives and a dead-letter queue; autoscaling delay, in-flight quotas, retention expiry and the SQS replicated-copy anomaly are still not modeled. Batched receives are counted per dispatch round, so messages that arrive as separate events are never batched together. Latency is a constant, not a distribution. Hung workers are modeled as alive-but-stalled processes whose heartbeats continue until the visibility budget is exhausted and which are restarted exactly when their lease expires; real supervisors may detect hangs earlier (liveness probes) or later. Crash and hang rates are independent per attempt. Results demonstrate mechanisms and comparative behavior under controlled assumptions; they are not AWS production benchmarks.
 
 ## Statistical conclusion validity
 
