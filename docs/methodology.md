@@ -36,18 +36,22 @@ Columns prefixed `steady_` repeat key metrics for jobs sent after the first `war
 
 ## Primary hypotheses
 
-`configs/full.json` declares eight hypotheses (H1–H8), each a single paired test of one metric between two policies in one scenario, with an expected direction. `primary_tests` applies Holm correction within this family only and marks a hypothesis `supported` when the mean difference has the expected sign and the adjusted p-value is below 0.05. All other comparisons are exploratory and Holm-corrected separately across `paired_comparisons.csv`.
+`configs/full.json` declares eleven hypotheses (H1–H11), each a single paired test of one metric between two policies in one scenario, with an expected direction. `primary_tests` applies Holm correction within this family only and marks a hypothesis `supported` when the mean difference has the expected sign and the adjusted p-value is below 0.05. All other comparisons are exploratory and Holm-corrected separately across `paired_comparisons.csv`.
 
-H1–H4 re-test findings from Phases 2 and 3 on the same seeds; they are labelled post hoc and are confirmatory only in the sense of surviving the stricter family correction. H5–H8 were committed to the repository (`bfab621`) before any evaluation-seed run of the code that tests them.
+H1–H4 re-test findings from Phases 2 and 3 on the same seeds; they are labelled post hoc and are confirmatory only in the sense of surviving the stricter family correction. H5–H8 were committed to the repository (`bfab621`) before any evaluation-seed run of the code that tests them; H9–H11 were committed with their code (`e49c2ea`) before the evaluation run.
 
 ## Tuning seeds
 
-Design choices tuned on data use seeds 1001–1010, which never overlap the evaluation seeds (11–220). The partial-history cold-start factor (1.5) was chosen this way.
+Design choices tuned on data use seeds 1001–1010, which never overlap the evaluation seeds (11–220). The partial-history cold-start factor (1.5), the Page–Hinkley threshold (3, from 1–4) and the choice to re-read the heartbeat budget were chosen this way.
 
 ## Phase 4 metrics
 
 - `prediction_coverage`: share of jobs whose first successful attempt finished within the predicted quantile (before the margin), excluding cold-start fallbacks. First attempts only, because a job that overran is redelivered and would otherwise be counted as uncovered once per retry.
 - `tradeoff_cost_s_per_job`: seconds of duplicate-processing work plus seconds of failure-recovery delay, per completed job. It weights the two equally (cost ratio 1).
+
+## Phase 4.3 metric
+
+- `change_points_detected`: changes the policy's Page–Hinkley detector flagged in the run. On workloads without a real shift every detection is a false alarm.
 
 ## Hang sensitivity
 
