@@ -273,6 +273,12 @@ On the evaluation seeds both final hypotheses were supported, bringing the decla
 
 The scaled detector keeps most, not all, of the shift benefit (5.2% against 4.9% unscaled) and recovers part of the heavy-tail recovery cost (8.5 s against 9.1 s with failures). The rejected cost-aware heartbeat budget confirmed its rejection on evaluation seeds: on heavy-tailed hangs its trade-off cost was 3.10 s/job against 2.50 for fixed heartbeat.
 
+### Phase 6.1: real-SQS replication harness (ready to run)
+
+`src/replication.py` runs the same seeded jobs and policies through a real SQS queue (worker threads, `sleep` as work, heartbeats, crashes from the same random draws) and through the simulator, and writes a real-versus-simulated comparison. It never creates or deletes queues, refuses a non-empty queue, only touches messages tagged with its run id, and cleans up after itself. An in-memory fake client that follows SQS visibility rules lets it run offline.
+
+**Status: built and tested offline; not yet run against AWS.** No credentials or queue were available in the development environment. In the offline dry run (`--fake --time-scale 0.2`, 40 jobs, 4 policies) the threaded run matched its simulated twin on duplicates, attempts, recovery and heartbeat extensions; makespan differed by about 1 s of polling. That shows the harness is correct, not that the simulator matches AWS. The checklist, safety notes and cost estimate (well inside the free tier) are in [docs/aws_replication.md](docs/aws_replication.md).
+
 ## Limitations
 
 The simulator models one Standard queue with zero network latency, per-message rather than batched API calls, deterministic per-job service time across retries, instantaneous worker replacement, and first-success deletion after concurrent redelivery. It does not model SQS's rare replicated-copy duplicates, message-retention expiry, in-flight quotas, long-poll billing nuances, network partitions, or AWS service variance. The per-class oracle uses the entire generated dataset and is therefore stronger than a realistically pre-tuned baseline. A normal CI is only approximate with few seeds. See [docs/limitations.md](docs/limitations.md).
