@@ -11,6 +11,9 @@ class Message:
     processing_duration: float
     creation_time: float
     experiment_id: str
+    # A poison message fails on every attempt (e.g. malformed payload); only a
+    # dead-letter queue removes it.
+    poison: bool = False
 
 
 @dataclass
@@ -37,4 +40,7 @@ class DeliveryAttempt:
     visibility_budget: float = 0.0
     hung: bool = False
     used_fallback: bool = False
+    # Effective processing time of this attempt: the job's base duration scaled
+    # by retry jitter and worker speed (equal to the base duration by default).
+    duration: float = 0.0
 

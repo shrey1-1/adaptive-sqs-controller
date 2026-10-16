@@ -83,10 +83,33 @@ def summarize_run(
         "worker_failures": float(len(failures)),
         "worker_hangs": float(sim_result.get("worker_hangs", 0)),
         "change_points_detected": float(sim_result.get("policy_change_points", 0)),
+        **_dead_letter_metrics(sim_result, df),
         "mean_hang_recovery_time_s": float(hang_recoveries.mean()) if hang_recoveries.size else math.nan,
         "p95_hang_recovery_time_s": float(np.percentile(hang_recoveries, 95)) if hang_recoveries.size else math.nan,
         "event_limit_reached": float(bool(sim_result["event_limit_reached"])),
         **_steady_state_metrics(sim_result, df, predicts, warmup_fraction),
+    }
+
+
+def _dead_letter_metrics(sim_result: dict[str, Any], df: pd.DataFrame) -> dict[str, float]:
+    """Dead-letter queue outcomes. Every non-poison job sent to the DLQ is a false
+    positive: a healthy job that a too-short timeout redelivered until it hit
+    maxReceiveCount. `dlq_but_completed` counts those whose work had already been
+    committed by a slower attempt, so replaying the DLQ would duplicate it."""
+    dead = sim_result.get("dead_lettered", {}) or {}
+    poison = set(sim_result.get("poison_job_ids", []) or [])
+    sends = sim_result.get("job_send_times", {}) or {}
+    all_jobs = set(sends) if sends else (set(df["job_id"]) if len(df) else set())
+    healthy = all_jobs - poison
+    false_dlq = [job for job in dead if job not in poison]
+    committed = set(df.loc[df["committed_result"], "job_id"]) if len(df) else set()
+    quarantine = [dead[job] - sends[job] for job in poison if job in dead and job in sends]
+    return {
+        "dead_lettered_jobs": float(len(dead)),
+        "false_dlq_rate": len(false_dlq) / max(len(healthy), 1),
+        "dlq_but_completed": float(sum(job in committed for job in false_dlq)),
+        "healthy_completion_rate": len(committed & healthy) / max(len(healthy), 1),
+        "poison_quarantine_time_s": float(np.mean(quarantine)) if quarantine else math.nan,
     }
 
 

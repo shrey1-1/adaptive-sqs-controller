@@ -241,6 +241,116 @@
         "adaptive_cost_aware",
         "adaptive_cost_r4"
       ]
+    },
+    "realistic_mixed": {
+      "workload": "mixed",
+      "failure": "medium",
+      "retry_jitter": 0.2,
+      "worker_speed_spread": 0.25,
+      "api_latency": 0.05,
+      "receive_batch_size": 10,
+      "outage_rate": 0.01,
+      "outage_size": 3,
+      "max_receive_count": 5
+    },
+    "realistic_mixed_hangs": {
+      "workload": "mixed",
+      "failure": "low",
+      "hang": "medium",
+      "retry_jitter": 0.2,
+      "worker_speed_spread": 0.25,
+      "api_latency": 0.05,
+      "receive_batch_size": 10,
+      "outage_rate": 0.01,
+      "outage_size": 3,
+      "max_receive_count": 5
+    },
+    "realistic_shift": {
+      "workload": "sudden_shift",
+      "failure": "low",
+      "retry_jitter": 0.2,
+      "worker_speed_spread": 0.25,
+      "api_latency": 0.05,
+      "receive_batch_size": 10,
+      "outage_rate": 0.01,
+      "outage_size": 3,
+      "max_receive_count": 5
+    },
+    "realistic_heavy_hangs": {
+      "workload": "heavy_tailed",
+      "failure": "low",
+      "hang": "medium",
+      "retry_jitter": 0.2,
+      "worker_speed_spread": 0.25,
+      "api_latency": 0.05,
+      "receive_batch_size": 10,
+      "outage_rate": 0.01,
+      "outage_size": 3,
+      "max_receive_count": 5
+    },
+    "realistic_poison": {
+      "workload": "mixed",
+      "failure": "low",
+      "poison_fraction": 0.03,
+      "retry_jitter": 0.2,
+      "worker_speed_spread": 0.25,
+      "api_latency": 0.05,
+      "receive_batch_size": 10,
+      "outage_rate": 0.01,
+      "outage_size": 3,
+      "max_receive_count": 5
+    },
+    "dlq_sweep_m2": {
+      "workload": "mixed",
+      "failure": "low",
+      "max_receive_count": 2,
+      "policies": [
+        "fixed_short",
+        "fixed_overall_mean",
+        "pretuned_per_class",
+        "adaptive_p90",
+        "fixed_heartbeat",
+        "adaptive_heartbeat_dynamic"
+      ]
+    },
+    "dlq_sweep_m3": {
+      "workload": "mixed",
+      "failure": "low",
+      "max_receive_count": 3,
+      "policies": [
+        "fixed_short",
+        "fixed_overall_mean",
+        "pretuned_per_class",
+        "adaptive_p90",
+        "fixed_heartbeat",
+        "adaptive_heartbeat_dynamic"
+      ]
+    },
+    "dlq_sweep_m5": {
+      "workload": "mixed",
+      "failure": "low",
+      "max_receive_count": 5,
+      "policies": [
+        "fixed_short",
+        "fixed_overall_mean",
+        "pretuned_per_class",
+        "adaptive_p90",
+        "fixed_heartbeat",
+        "adaptive_heartbeat_dynamic"
+      ]
+    },
+    "dlq_sweep_m10": {
+      "workload": "mixed",
+      "failure": "low",
+      "max_receive_count": 10,
+      "policies": [
+        "fixed_short",
+        "fixed_overall_mean",
+        "pretuned_per_class",
+        "adaptive_p90",
+        "fixed_heartbeat",
+        "adaptive_heartbeat_dynamic"
+      ]
     }
   },
   "primary_hypotheses": [
@@ -341,6 +451,51 @@
       "reference": "adaptive_heartbeat_dynamic",
       "comparator": "adaptive_heartbeat",
       "metric": "mean_hang_recovery_time_s",
+      "expected": "lower"
+    },
+    {
+      "id": "H12",
+      "declared": "before results (Phase 5); no tuning",
+      "scenario": "dlq_sweep_m3",
+      "reference": "adaptive_p90",
+      "comparator": "fixed_overall_mean",
+      "metric": "false_dlq_rate",
+      "expected": "lower"
+    },
+    {
+      "id": "H13",
+      "declared": "before results (Phase 5); no tuning",
+      "scenario": "realistic_shift",
+      "reference": "adaptive_p90",
+      "comparator": "pretuned_per_class",
+      "metric": "duplicate_processing_rate",
+      "expected": "lower"
+    },
+    {
+      "id": "H14",
+      "declared": "before results (Phase 5); no tuning",
+      "scenario": "realistic_mixed_hangs",
+      "reference": "adaptive_heartbeat_dynamic",
+      "comparator": "fixed_heartbeat",
+      "metric": "mean_hang_recovery_time_s",
+      "expected": "lower"
+    },
+    {
+      "id": "H15",
+      "declared": "before results (Phase 5); no tuning",
+      "scenario": "realistic_mixed_hangs",
+      "reference": "adaptive_heartbeat_dynamic",
+      "comparator": "fixed_heartbeat",
+      "metric": "duplicate_processing_rate",
+      "expected": "lower"
+    },
+    {
+      "id": "H16",
+      "declared": "before results (Phase 5); no tuning",
+      "scenario": "realistic_poison",
+      "reference": "adaptive_heartbeat_dynamic",
+      "comparator": "fixed_heartbeat",
+      "metric": "poison_quarantine_time_s",
       "expected": "lower"
     }
   ]

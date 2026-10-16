@@ -106,6 +106,30 @@ def build_policies(
     return policies
 
 
+REALISM_KEYS = ("max_receive_count", "retry_jitter", "worker_speed_spread", "api_latency", "receive_batch_size")
+
+
+def realism_options(scenario: dict[str, Any], messages, seed: int, workers: int) -> dict[str, Any]:
+    """Phase 5 simulator settings named in a scenario; absent keys keep defaults.
+
+    Correlated outages come from `outage_rate` (outages per simulated second)
+    and `outage_size` (workers lost per outage), drawn from a generator keyed by
+    the seed alone, so every policy faces the same outages at the same times.
+    """
+    options = {key: scenario[key] for key in REALISM_KEYS if key in scenario}
+    rate = float(scenario.get("outage_rate", 0.0))
+    if rate > 0:
+        size = min(int(scenario.get("outage_size", 3)), workers)
+        rng = np.random.default_rng([seed, 0x0D7A6E])
+        horizon = max(m.creation_time for m in messages) + 120.0
+        times = np.cumsum(rng.exponential(1.0 / rate, size=int(horizon * rate * 3) + 10))
+        options["outages"] = [
+            (float(t), [int(w) for w in rng.choice(workers, size=size, replace=False)])
+            for t in times[times < horizon]
+        ]
+    return options
+
+
 def run_experiments(config: dict[str, Any], output_dir: str | Path) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -120,8 +144,10 @@ def run_experiments(config: dict[str, Any], output_dir: str | Path) -> tuple[pd.
                 n_messages=int(config.get("n_messages", 120)),
                 arrival_rate=float(config.get("arrival_rate", 1.2)),
                 burst_probability=float(config.get("burst_probability", 0.0)),
+                poison_fraction=float(scenario.get("poison_fraction", 0.0)),
             )
             messages, shift_time = generate_workload(spec, seed, experiment_id)
+            realism = realism_options(scenario, messages, seed, int(config.get("workers", 8)))
             margins = scenario.get("safety_margins", [config.get("safety_margin", 2.0)])
             windows = scenario.get("history_windows", [config.get("history_window", 40)])
             variants = {
@@ -150,6 +176,7 @@ def run_experiments(config: dict[str, Any], output_dir: str | Path) -> tuple[pd.
                             workers=int(config.get("workers", 8)),
                             seed=seed + 1000,
                             hang_detection_timeout=scenario.get("hang_detection"),
+                            **realism,
                         )
                         result = sim.run()
                         attempts = pd.DataFrame(result["attempt_rows"])

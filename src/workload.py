@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 import numpy as np
 
@@ -15,6 +15,7 @@ class WorkloadSpec:
     burst_probability: float = 0.0
     burst_size: int = 6
     shift_fraction: float = 0.5
+    poison_fraction: float = 0.0
 
 
 def _duration(kind: str, rng: np.random.Generator, shifted: bool = False) -> float:
@@ -81,6 +82,11 @@ def generate_workload(
                 experiment_id=experiment_id,
             )
         )
+    if spec.poison_fraction > 0:
+        # A separate generator, so marking poison leaves every other draw (and
+        # therefore every earlier workload) unchanged.
+        marks = np.random.default_rng([seed, 0xBAD]).random(len(messages)) < spec.poison_fraction
+        messages = [replace(m, poison=True) if bad else m for m, bad in zip(messages, marks)]
     return messages, shift_time
 
 
