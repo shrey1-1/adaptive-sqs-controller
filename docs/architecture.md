@@ -19,8 +19,10 @@ An expired attempt may keep processing. Redelivery creates a new attempt and rec
 ```text
 on_receive(job_class):
     h = recent_successful_durations[job_class]
-    if len(h) < minimum_history:
+    if len(h) == 0:
         return default_timeout
+    if len(h) < minimum_history:            # partial-history cold start
+        return clamp(1.5 * max(h) + safety_margin, T_min, T_max)
     estimate = percentile(h, 90)
     return clamp(estimate + safety_margin, T_min, T_max)
 

@@ -37,6 +37,23 @@ Roughly 2,000–3,000 requests for all four policies (sends, long polls, visibil
    ```
 7. Results land in `results/aws_replication/`. Delete the queue in the console afterwards if you no longer need it.
 
+## Alternative: AWS CloudShell (no access keys)
+
+CloudShell is a browser terminal that is already signed in to your account, so steps 2–3 are not needed:
+
+```bash
+aws sqs create-queue --queue-name adaptive-visibility-test
+git clone https://github.com/shrey1-1/adaptive-sqs-controller.git
+cd adaptive-sqs-controller
+pip3 install -q -r requirements.txt          # not --user: CloudShell runs Python in a virtual environment
+QURL=$(aws sqs get-queue-url --queue-name adaptive-visibility-test --query QueueUrl --output text)
+python3 -m src.replication --queue-url "$QURL" --region "$AWS_REGION" --no-open
+zip -r aws_real_run.zip results/aws_replication   # then Actions → Download file
+aws sqs delete-queue --queue-url "$QURL"
+```
+
+The recorded real run (22 Oct 2026) was made this way; its results are in `results/aws_replication/` and summarised in the README (Phase 6.1).
+
 ## What to expect and how to read it
 
 The fake dry run matches its simulated twin almost exactly, because the fake queue follows the simulator's rules; that only shows the harness is correct. Against real SQS, expect differences from network latency (tens of milliseconds per call), long-poll timing, thread scheduling, and SQS's own behaviour (for example whether a stale receipt handle can still delete a message). Agreement on duplicates and attempts within a job or two, and on recovery within about a second, would support the simulator; larger gaps are findings to report, not failures to hide.

@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>SQS Replication Report</title>
+<style>
+body { font-family: Segoe UI, Arial, sans-serif; margin: 32px; color: #1f2937; background: #f8fafc; }
+.card { background: white; border-radius: 12px; padding: 22px; margin: 18px 0; box-shadow: 0 2px 10px #0001; overflow-x: auto; }
+h1 { color: #0B3C49; } h2 { color: #13807A; }
+table { border-collapse: collapse; font-size: 13px; }
+th { background: #0B3C49; color: white; text-align: left; padding: 8px 10px; }
+td { padding: 7px 10px; border-bottom: 1px solid #dbe3ec; } tr:nth-child(even) { background: #f1f5f9; }
+.banner { padding: 14px 18px; border-radius: 10px; margin: 12px 0; }
+.fake { background: #FEF3DC; } .real { background: #DDF0EE; } .warn { background: #F9E0DA; }
+.figure img { display: block; max-width: 100%; width: 900px; height: auto; border: 1px solid #dbe3ec; margin: 18px 0; }
+.note { color: #475569; }
+</style></head><body>
+<h1>SQS Replication Report</h1>
+<p class="note">The same seeded jobs and timeout policies run through a queue and through the simulator, then compared. One run per policy: this tests whether the simulator predicts the queue, not which policy is better.</p>
+<div class="banner real"><b>Real Amazon SQS run.</b> Differences from the simulator are findings: network latency, polling, thread scheduling and SQS behaviour all play a part.</div>
+<div class="card"><h2>Figures</h2><div class="figure"><a href="plots/01_duplicate_processing_rate.png"><img src="plots/01_duplicate_processing_rate.png" alt="01_duplicate_processing_rate"></a></div>
+<div class="figure"><a href="plots/02_mean_failure_recovery_time_s.png"><img src="plots/02_mean_failure_recovery_time_s.png" alt="02_mean_failure_recovery_time_s"></a></div>
+<div class="figure"><a href="plots/03_mean_end_to_end_latency_s.png"><img src="plots/03_mean_end_to_end_latency_s.png" alt="03_mean_end_to_end_latency_s"></a></div>
+<div class="figure"><a href="plots/04_attempts.png"><img src="plots/04_attempts.png" alt="04_attempts"></a></div>
+<div class="figure"><a href="plots/05_extensions.png"><img src="plots/05_extensions.png" alt="05_extensions"></a></div>
+<div class="figure"><a href="plots/06_makespan_s.png"><img src="plots/06_makespan_s.png" alt="06_makespan_s"></a></div>
+<div class="figure"><a href="plots/07_attempt_timeline.png"><img src="plots/07_attempt_timeline.png" alt="07_attempt_timeline"></a></div></div>
+<div class="card"><h2>Real vs simulated, every metric</h2><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th>Policy</th>
+      <th>Metric</th>
+      <th>Queue run</th>
+      <th>Simulated</th>
+      <th>Difference</th>
+      <th>Relative difference (%)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>fixed_short</td>
+      <td>Duplicate-processing rate (%)</td>
+      <td>20.000</td>
+      <td>28.571</td>
+      <td>-8.571</td>
+      <td>-30.000</td>
+    </tr>
+    <tr>
+      <td>fixed_short</td>
+      <td>Mean failure recovery (s)</td>
+      <td>7.958</td>
+      <td>2.285</td>
+      <td>5.673</td>
+      <td>248.321</td>
+    </tr>
+    <tr>
+      <td>fixed_short</td>
+      <td>Mean end-to-end latency (s)</td>
+      <td>27.044</td>
+      <td>44.655</td>
+      <td>-17.611</td>
+      <td>-39.438</td>
+    </tr>
+    <tr>
+      <td>fixed_short</td>
+      <td>Processing attempts</td>
+      <td>50.000</td>
+      <td>56.000</td>
+      <td>-6.000</td>
+      <td>-10.714</td>
+    </tr>
+    <tr>
+      <td>fixed_short</td>
+      <td>Heartbeat extensions</td>
+      <td>0.000</td>
+      <td>0.000</td>
+      <td>0.000</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>fixed_short</td>
+      <td>Makespan (all jobs done) (s)</td>
+      <td>67.345</td>
+      <td>84.880</td>
+      <td>-17.535</td>
+      <td>-20.658</td>
+    </tr>
+    <tr>
+      <td>fixed_heartbeat</td>
+      <td>Duplicate-processing rate (%)</td>
+      <td>0.000</td>
+      <td>0.000</td>
+      <td>0.000</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>fixed_heartbeat</td>
+      <td>Mean failure recovery (s)</td>
+      <td>3.553</td>
+      <td>4.119</td>
+      <td>-0.567</td>
+      <td>-13.759</td>
+    </tr>
+    <tr>
+      <td>fixed_heartbeat</td>
+      <td>Mean end-to-end latency (s)</td>
+      <td>24.679</td>
+      <td>20.251</td>
+      <td>4.427</td>
+      <td>21.862</td>
+    </tr>
+    <tr>
+      <td>fixed_heartbeat</td>
+      <td>Processing attempts</td>
+      <td>41.000</td>
+      <td>41.000</td>
+      <td>0.000</td>
+      <td>0.000</td>
+    </tr>
+    <tr>
+      <td>fixed_heartbeat</td>
+      <td>Heartbeat extensions</td>
+      <td>28.000</td>
+      <td>28.000</td>
+      <td>0.000</td>
+      <td>0.000</td>
+    </tr>
+    <tr>
+      <td>fixed_heartbeat</td>
+      <td>Makespan (all jobs done) (s)</td>
+      <td>53.416</td>
+      <td>44.598</td>
+      <td>8.818</td>
+      <td>19.771</td>
+    </tr>
+    <tr>
+      <td>adaptive_p90</td>
+      <td>Duplicate-processing rate (%)</td>
+      <td>2.381</td>
+      <td>4.651</td>
+      <td>-2.270</td>
+      <td>-48.810</td>
+    </tr>
+    <tr>
+      <td>adaptive_p90</td>
+      <td>Mean failure recovery (s)</td>
+      <td>5.485</td>
+      <td>19.459</td>
+      <td>-13.974</td>
+      <td>-71.812</td>
+    </tr>
+    <tr>
+      <td>adaptive_p90</td>
+      <td>Mean end-to-end latency (s)</td>
+      <td>24.952</td>
+      <td>24.535</td>
+      <td>0.417</td>
+      <td>1.699</td>
+    </tr>
+    <tr>
+      <td>adaptive_p90</td>
+      <td>Processing attempts</td>
+      <td>42.000</td>
+      <td>43.000</td>
+      <td>-1.000</td>
+      <td>-2.326</td>
+    </tr>
+    <tr>
+      <td>adaptive_p90</td>
+      <td>Heartbeat extensions</td>
+      <td>0.000</td>
+      <td>0.000</td>
+      <td>0.000</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>adaptive_p90</td>
+      <td>Makespan (all jobs done) (s)</td>
+      <td>47.696</td>
+      <td>62.812</td>
+      <td>-15.116</td>
+      <td>-24.066</td>
+    </tr>
+    <tr>
+      <td>adaptive_heartbeat_dynamic</td>
+      <td>Duplicate-processing rate (%)</td>
+      <td>0.000</td>
+      <td>0.000</td>
+      <td>0.000</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>adaptive_heartbeat_dynamic</td>
+      <td>Mean failure recovery (s)</td>
+      <td>9.771</td>
+      <td>4.119</td>
+      <td>5.652</td>
+      <td>137.200</td>
+    </tr>
+    <tr>
+      <td>adaptive_heartbeat_dynamic</td>
+      <td>Mean end-to-end latency (s)</td>
+      <td>23.768</td>
+      <td>20.251</td>
+      <td>3.517</td>
+      <td>17.367</td>
+    </tr>
+    <tr>
+      <td>adaptive_heartbeat_dynamic</td>
+      <td>Processing attempts</td>
+      <td>41.000</td>
+      <td>41.000</td>
+      <td>0.000</td>
+      <td>0.000</td>
+    </tr>
+    <tr>
+      <td>adaptive_heartbeat_dynamic</td>
+      <td>Heartbeat extensions</td>
+      <td>28.000</td>
+      <td>28.000</td>
+      <td>0.000</td>
+      <td>0.000</td>
+    </tr>
+    <tr>
+      <td>adaptive_heartbeat_dynamic</td>
+      <td>Makespan (all jobs done) (s)</td>
+      <td>46.268</td>
+      <td>44.598</td>
+      <td>1.669</td>
+      <td>3.743</td>
+    </tr>
+  </tbody>
+</table></div>
+<div class="card"><h2>Run settings</h2><table><tr><td>n_jobs</td><td>40</td></tr><tr><td>workers</td><td>4</td></tr><tr><td>seed</td><td>11</td></tr><tr><td>failure_probability</td><td>0.08</td></tr><tr><td>workload</td><td>mixed</td></tr><tr><td>time_scale</td><td>1.0</td></tr><tr><td>policies</td><td>[&#x27;fixed_short&#x27;, &#x27;fixed_heartbeat&#x27;, &#x27;adaptive_p90&#x27;, &#x27;adaptive_heartbeat_dynamic&#x27;]</td></tr></table>
+<p class="note">Files: <a href="replication_summary.csv">replication_summary.csv</a> · <a href="replication_attempts.csv">replication_attempts.csv</a> · <a href="replication_config.json">replication_config.json</a></p></div>
+</body></html>

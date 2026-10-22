@@ -33,8 +33,15 @@ def test_adaptive_percentile_calculation():
 
 
 def test_insufficient_history_fallback():
+    # Default "partial" cold start: 1.5 x largest sample + margin (2 s default).
     policy = AdaptivePercentilePolicy(default_timeout=13, min_history=3)
     policy.observe("x", 2, 0)
     decision = policy.decide("x", 0)
+    assert math.isclose(decision.timeout, 1.5 * 2 + 2)
+    assert decision.used_fallback
+    # The older "default" rule ignores partial history and uses the fixed fallback.
+    fixed = AdaptivePercentilePolicy(default_timeout=13, min_history=3, cold_start="default")
+    fixed.observe("x", 2, 0)
+    decision = fixed.decide("x", 0)
     assert decision.timeout == 13
     assert decision.used_fallback
